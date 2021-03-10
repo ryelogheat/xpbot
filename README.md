@@ -89,7 +89,7 @@ Automatically parse, rename, and upload torrents to trackers using the UNIT3D co
       img_host_1=freeimage
       img_host_2=imgbb
       img_host_3=imgyukle
-      img_host_3=
+      img_host_4=
       ```
 <br />
 <br />
