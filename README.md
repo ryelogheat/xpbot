@@ -168,13 +168,13 @@ Automatically parse, rename, and upload torrents to trackers using the UNIT3D co
 7. **Auto Mode (silent mode)**
    * Set this to ```true``` to run without any human interaction
      * This will parse the filename & auto select the *right* TMDB ID
-      * If minor issues are found (e.g. the filename year is off by 1) it will deal with it and upload anyways 
-      * Note that you are responsible for following **all** tracker rules and should manually double check all automatic uploads 
+     * If minor issues are found (e.g. the filename year is off by 1) it will deal with it and upload anyways 
+     * Note that you are responsible for following **all** tracker rules and should manually double check all automatic uploads 
    <br /> 
-   * Set this to ```false``` to have a more interactive & hands on experience (**recommended**)
+   * Set this to ```false``` to have a more interactive & hands on experience **(recommended)**
       * If issues are found (e.g. source can't be auto-detected) you'll be prompted for user input that we can use
       * You'll be shown status updates continually & will have a chance to review/approve the final upload data
-         * You'll be shown the exact POST data/file payload before its uploaded for your review/approval 
+      * You'll be shown the exact POST data/file payload before its uploaded for your review/approval 
    
    <br />
    <br />
