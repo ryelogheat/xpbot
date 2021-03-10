@@ -4,9 +4,6 @@
   "upload_form": "https://blutopia.xyz/api/torrents/upload?api_token={api_key}",
   "torrents_search": "https://blutopia.xyz/api/torrents/filter?api_token={api_key}",
   "source": "blu",
-  "announce": [
-      "https://blutopia.xyz/announce/6bff37fbc1878ffc122c92a57ba6702f"
-  ],
 
 
   "translation": {
@@ -48,7 +45,7 @@
 
     "category_id": {
       "1": "movie",
-      "2": "tv"
+      "2": "episode"
     },
 
     "type_id": {
