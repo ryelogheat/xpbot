@@ -198,8 +198,9 @@ Automatically parse, rename, and upload torrents to trackers using the UNIT3D co
    1. Add support for raw Blu-ray Disc uploads
    2. Integrate ***trumping*** & ***co-existing*** rules
       * **Trumping**: An *Extended, Dolby Vision Remux* should trump an *Extended, HDR10 Remux* **(assuming DV remux has HDR10 fallback)**
-      * **Co-Existing**: Both *Extended* & *Theatrical* Remux's can co-exist 
+      * **Co-Existing**: Both *Extended* & *Theatrical* Remuxs can co-exist 
    3. Add support for a "queue" that can upload all files / folders in specific location 
+   4. *fast resume* for rtorrent
 
 
 
