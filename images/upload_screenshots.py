@@ -148,8 +148,7 @@ def take_upload_screens(duration, upload_media_import, torrent_title_import, bas
     for host in range(1, 5):  # current number of image hosts available (4)
         if len(os.getenv('img_host_{}'.format(host))) != 0:
             if len(os.getenv('{host_site}_api_key'.format(host_site=os.getenv('img_host_{}'.format(host))))) == 0:
-                console.print("Can't upload to '{}' without an API key".format(os.getenv('img_host_{}'.format(host))),
-                              style='Red')
+                console.print(f"Can't upload to '{os.getenv('img_host_{}'.format(host))}' without an API key", style='Red', highlight=False)
                 logging.error("Can't upload to '{}' without an API key".format(os.getenv('img_host_{}'.format(host))))
             else:
                 # Save the site & api key to upload_to_host_dict
