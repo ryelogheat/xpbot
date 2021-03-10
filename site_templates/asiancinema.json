@@ -4,9 +4,6 @@
   "upload_form": "https://asiancinema.me/api/torrents/upload?api_token={api_key}",
   "torrents_search": "https://asiancinema.me/api/torrents/filter?api_token={api_key}",
   "source": "acm",
-  "announce": [
-    "https://asiancinema.me/announce/b28181989ed4cabd975b7444d69650d9"
-  ],
 
 
   "translation": {
@@ -20,19 +17,35 @@
     "tmdb": "tmdb",
     "imdb": "imdb",
     "anon": "anonymous",
-    "live": "live"
+    "live": "live",
+
+    "sd": "sd",
+    "tvdb": "tvdb",
+    "mal": "mal",
+    "igdb": "igdb",
+    "optimized": "stream",
+    "nfo_file": "nfo_file"
+
+
   },
   "Required": {
+
     "torrent": "file",
     "name": "string",
     "description": "string",
     "mediainfo": "string",
-    "sd": "int",
+    "sd": "string",
     "anonymous": "string",
+    "stream": "string",
+    "igdb": "string",
+    "mal": "string",
+    "tvdb": "string",
+
+
 
     "category_id": {
       "1": "movie",
-      "2": "tv"
+      "2": "episode"
     },
 
     "type_id": {
