@@ -138,7 +138,7 @@ def take_upload_screens(duration, upload_media_import, torrent_title_import, bas
     # Verify that num_of_screenshots is not set to 0
     if num_of_screenshots == "0":
         with open(base_path + "/temp_upload/description.txt", "w") as no_images:
-            no_images.write("[center] \n---------------------- [size=22]Screenshots[/size] ----------------------\n[/center]")
+            no_images.write("[center] ---------------------- [size=22]Screenshots[/size] ----------------------\n[/center]")
             no_images.close()
         logging.error('num_of_screenshots is set to 0, continuing without screenshots')
         return "num_of_screenshots is set to 0, continuing without screenshots"
@@ -158,7 +158,7 @@ def take_upload_screens(duration, upload_media_import, torrent_title_import, bas
 
     if len(upload_to_host_dict) == 0:
         with open(base_path + "/temp_upload/description.txt", "w") as no_images:
-            no_images.write("[center] \n---------------------- [size=22]Screenshots[/size] ----------------------\n[/center]")
+            no_images.write("[center] ---------------------- [size=22]Screenshots[/size] ----------------------\n[/center]")
             no_images.close()
 
         logging.info("All image hosts are disabled by the user so we'll upload the torrent without screenshots")
@@ -178,7 +178,7 @@ def take_upload_screens(duration, upload_media_import, torrent_title_import, bas
     # As to not keep opening and closing description.txt we instead open it now, put in the header and then write in each images bbcode then finally close after the loop
     with open(base_path + "/temp_upload/description.txt", "w") as write_bbcode_description_txt:
         # write_bbcode_description_txt = open(base_path + "/temp_upload/description.txt", "w")
-        write_bbcode_description_txt.write("[center] \n ---------------------- [size=22]Screenshots[/size] ---------------------- \n")
+        write_bbcode_description_txt.write("[center] ---------------------- [size=22]Screenshots[/size] ---------------------- \n")
 
         # Now we start the actual upload process
         for host_site, host_api in upload_to_host_dict.items():
