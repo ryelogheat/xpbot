@@ -492,8 +492,7 @@ def set_specific_values(value):
     # --- WEB streaming service stuff here --- #
     if torrent_info["source"] == "Web":
         # You can add more streaming platforms here, just append the sites 'tag' to the regex below (Case sensitive)
-        match_web_source = re.search(r'NF|AMZN|IT|ATVP|DSNP|HULU|VUDU|HMAX|iP|CBS|ESPN|STAN|STARZ',
-                                     torrent_info["raw_file_name"])
+        match_web_source = re.search(r'NF|AMZN|IT|ATVP|DSNP|HULU|VUDU|HMAX|iP|CBS|ESPN|STAN|STARZ|NBC', torrent_info["raw_file_name"])
         if match_web_source is not None:
             torrent_info["web_source"] = match_web_source.group()
             logging.info("Using '{}' as the web release source".format(match_web_source.group()))
