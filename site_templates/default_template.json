@@ -1,0 +1,229 @@
+{
+  "name": "<TRACKER_NAME>",
+  "url": "<HTTPS://DOMAIN.COM>",
+  "upload_form": "<HTTPS://DOMAIN.COM/API/UPLOAD/>{api_key}",
+  "torrents_search": "<HTTPS://DOMAIN.COM/API/TORRENTS/>{api_key}",
+  "source": "<TRACKER_ACRONYM>",
+
+
+  "translation": {
+    "dot_torrent": "<required_key_file>",
+    "torrent_title" : "<required_key_name>",
+    "description": "<required_key_description>",
+    "mediainfo": "<required_key_mediainfo>",
+    "type": "<required_key_category_id>",
+    "source": "<required_key_type_id>",
+    "resolution": "<required_key_resolution>",
+    "tmdb": "<required_key_tmdb>",
+    "imdb": "<required_key_imdb>",
+    "anon": "<required_key_anon>",
+    "live": "<required_key_live>",
+    "tvdb": "<required_key>",
+    "mal": "<required_key>",
+    "igdb": "<required_key>",
+
+    "sd": "<Optional_key>",
+    "optimized": "<Optional_key>",
+    "nfo_file": "<Optional_key>"
+  },
+
+
+
+  "Required": {
+    "required_key_file": "file",
+    "required_key_name": "string",
+    "required_key_description": "string",
+    "required_key_mediainfo": "file",
+    "required_key_live": "string",
+    "required_key_anon": "string",
+
+    "required_key_category_id": {
+      "1": "movie",
+      "2": "episode"
+    },
+
+
+    "required_key_resolution": {
+      "tracker_required_key_2160p_remux": {
+        "bluray_remux": 1,
+        "2160p": 1
+      },
+
+      "tracker_required_key_1080p_remux": {
+        "bluray_remux": 1,
+        "1080p": 2,
+        "1080i": 2
+      },
+
+      "tracker_required_key_2160p": {
+        "2160p": 1,
+        "bluray_encode": 2,
+        "webdl": 2,
+        "webrip" : 2
+      },
+
+      "tracker_required_key_1080p": {
+        "1080p": 1,
+        "bluray_encode": 2,
+        "webdl": 2,
+        "webrip" : 2
+      },
+
+      "tracker_required_key_1080i": {
+        "1080i": 1,
+        "bluray_encode": 2,
+        "webdl": 2,
+        "webrip" : 2
+      },
+
+      "tracker_required_key_720p": {
+        "720p": 1,
+        "bluray_encode": 2,
+        "webdl": 2,
+        "webrip" : 2
+      },
+
+      "tracker_required_key_576p": {
+        "576p": 1,
+        "webdl": 1
+      },
+
+      "tracker_required_key_540p": {
+        "540p": 1,
+        "webdl": 1
+      },
+
+      "tracker_required_key_dvd_remux": {
+        "dvd": 1,
+        "576p": 2,
+        "540p" : 2,
+        "480p": 2
+      },
+
+      "tracker_required_key_480p": {
+        "480p": 1,
+        "webdl": 1
+      },
+
+      "tracker_required_key_Other": {
+        "other": 0
+      }
+    },
+
+
+    "required_key_type_id": {
+      "Blu-ray": {
+        "bluray": 1,
+        "disc": 2,
+        "remux": 2,
+        "encode": 2
+      },
+
+      "HD-DVD": {
+        "?": 1
+      },
+
+      "WEB": {
+        "web": 1,
+        "webrip": 2,
+        "webdl": 2
+      },
+
+      "HDTV": {
+        "hdtv": 1
+      },
+
+      "DVD": {
+        "dvd": 1
+      }
+    },
+
+    "required_key_imdb": "string",
+    "required_key_tmdb": "string"
+  },
+
+  "Optional": {
+    "edition": [
+      "Collector",
+      "Director",
+      "Extended",
+      "Limited",
+      "Special",
+      "Theatrical",
+      "Uncut",
+      "Unrated"
+    ],
+    "custom_edition": "string",
+    "region": [
+      "AUS",
+      "CAN",
+      "CEE",
+      "CHN",
+      "ESP",
+      "EUR",
+      "FRA",
+      "GBR",
+      "GER",
+      "HKG",
+      "ITA",
+      "JPN",
+      "KOR",
+      "NOR",
+      "NLD",
+      "RUS",
+      "TWN",
+      "USA"
+    ],
+    "tags": [
+      "Commentary",
+      "2in1",
+      "Hybrid",
+      "OpenMatte",
+      "2D3D",
+      "WEBRip",
+      "WEBDL",
+      "3D",
+      "4kRemaster",
+      "DualAudio",
+      "EnglishDub",
+      "Personal",
+      "Scene",
+      "DigitalExtras",
+      "Extras"
+    ],
+    "nfo": "string",
+    "nfo_file": "file",
+    "pack": "int",
+    "special": "int",
+    "sd": "int"
+  },
+
+  "dupes": {
+    "request": "POST",
+
+    "keys": {
+      "action": "search",
+      "imdb_id": "string"
+    },
+
+    "parse_json": {
+      "top_lvl": "results"
+    },
+
+
+    "different_cuts": "100",
+    "2160p_remux": 1,
+    "2160p_encode": 1,
+    "1080p_remux": 1,
+    "1080p_encode": 2,
+    "720p_encode": 1,
+    "else": 1
+  },
+
+    "banned_groups": [
+      "group_1_optional",
+      "group_2_optional"
+    ]
+}
+
+
