@@ -492,7 +492,7 @@ def set_specific_values(value):
     # --- WEB streaming service stuff here --- #
     if torrent_info["source"] == "Web":
         # You can add more streaming platforms here, just append the sites 'tag' to the regex below (Case sensitive)
-        match_web_source = re.search(r'NF|AMZN|IT|ATVP|DSNP|HULU|VUDU|HMAX|iP|CBS|ESPN|STAN|STARZ|NBC', torrent_info["raw_file_name"])
+        match_web_source = re.search(r'NF|AMZN|iT|ATVP|DSNP|HULU|VUDU|HMAX|iP|CBS|ESPN|STAN|STARZ|NBC', torrent_info["raw_file_name"])
         if match_web_source is not None:
             torrent_info["web_source"] = match_web_source.group()
             logging.info("Using '{}' as the web release source".format(match_web_source.group()))
@@ -776,7 +776,7 @@ def format_title():
 
     if torrent_info["type"] == "movie":
         title_template = (
-            "{title} {year} {edition} {resolution} {region} {uhd} {source} {repack} {web_source} {web_type} {audio_codec} {Atmos} {audio_channels} {hdr} {dv} {video_codec} {hybrid} {remux} {group}".format(
+            "{title} {year} {edition} {resolution} {region} {repack} {uhd} {hybrid} {source} {remux} {web_source} {web_type} {hdr} {dv} {video_codec} {audio_codec} {Atmos} {audio_channels} {group}".format(
                 title=torrent_info["title"],
                 year=torrent_info["year"] if "year" in torrent_info else "",
                 edition=torrent_info["edition"] if "edition" in torrent_info else "",
@@ -800,13 +800,14 @@ def format_title():
     else:
         # tv
         title_template = (
-            "{title} {year} {season_or_episode} {repack} {resolution} {region} {source} {web_source} {web_type} {audio_codec} {audio_channels} {Atmos} {hdr} {dv} {video_codec} {hybrid} {remux} {group}".format(
+            "{title} {year} {season_or_episode} {repack} {resolution} {region} {uhd} {hybrid} {source} {remux} {web_source} {web_type} {hdr} {dv} {video_codec} {audio_codec} {Atmos} {audio_channels} {group}".format(
                 title=torrent_info["title"],
                 year=torrent_info["year"] if "year" in torrent_info else "",
                 season_or_episode=torrent_info["s00e00"],
                 repack=torrent_info["repack"] if "repack" in torrent_info else "",
                 resolution=torrent_info["screen_size"],
                 region=torrent_info["region"] if "region" in torrent_info else "",
+                uhd=torrent_info["uhd"] if "uhd" in torrent_info else "",
                 source=torrent_info["source"] if "source" in torrent_info and "web_type" not in torrent_info else "",
                 web_source=torrent_info["web_source"] if "web_source" in torrent_info else "",
                 web_type=torrent_info["web_type"] if "web_type" in torrent_info else "",
