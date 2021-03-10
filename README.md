@@ -26,7 +26,7 @@ Automatically parse, rename, and upload torrents to trackers using the UNIT3D co
     * run script using ```./auto_upload.py -t etc -p /path/to/file/autocompletes.now```
 4. A folder called ``temp_upload`` will be created which will store the files:
     * ```description.txt``` ```mediainfo.txt``` ```*.torrent```
-5. ###Raw Blu-rays are not currently supported
+5. **Raw Blu-rays are not currently supported**
     * BDInfo is required for Blu-ray discs which requires Docker etc
     * Support will be added soon
     

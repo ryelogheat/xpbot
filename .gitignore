@@ -1,3 +1,4 @@
 # Project exclude paths
 /venv/
 /config.env
+/upload_script.log
