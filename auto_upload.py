@@ -373,11 +373,20 @@ def in_depth_video_analyze(missing_value):
     # ---- Video Codec ---- #
     if missing_value == "video_codec":
         # First try to use our own Regex to extract it, if that fails then we can ues ffprobe/mediainfo
-        filename_video_codec_regex = re.search(r'HEVC|h265|H\.265|x265|AVC|h264|H\.264|x264',
-                                               torrent_info["raw_file_name"], re.IGNORECASE)
+        filename_video_codec_regex = re.search(r'HEVC|h265|H\.265|x265|AVC|h264|H\.264|x264', torrent_info["raw_file_name"], re.IGNORECASE)
         if filename_video_codec_regex is not None:
-            logging.info("used regex to extract the video codec: {}".format(filename_video_codec_regex.group()))
-            return filename_video_codec_regex.group()
+            # Rename h264 & h265 to H.264 & H.265 respectively
+            if filename_video_codec_regex.group() == "h264":
+                torrent_info["video_codec"] = "H.264"
+            elif filename_video_codec_regex.group() == "h265":
+                torrent_info["video_codec"] = "H.265"
+            # Anything else can just be used as is
+            else:
+                torrent_info["video_codec"] = filename_video_codec_regex.group()
+
+            logging.info(f"used regex to extract the video codec: {torrent_info['video_codec']}")
+            return torrent_info['video_codec']
+
         logging.error("Could not get video codec from filename")
         logging.info("Trying to use a 'source to codec' dict to figure it out (e.g. webdl -> H.264)")
 
@@ -450,8 +459,16 @@ def set_specific_values(value):
     # --- Video codec stuff here --- #
     filename_video_codec_regex = re.search(r'HEVC|h265|H\.265|x265|AVC|h264|H\.264|x264', torrent_info["raw_file_name"], re.IGNORECASE)
     if filename_video_codec_regex is not None:
-        logging.info("used regex to extract the video codec: {}".format(filename_video_codec_regex.group()))
-        torrent_info["video_codec"] = filename_video_codec_regex.group()
+        # Rename h264 & h265 to H.264 & H.265 respectively
+        if filename_video_codec_regex.group() == "h264":
+            torrent_info["video_codec"] = "H.264"
+        elif filename_video_codec_regex.group() == "h265":
+            torrent_info["video_codec"] = "H.265"
+        # Anything else can just be used as is
+        else:
+            torrent_info["video_codec"] = filename_video_codec_regex.group()
+
+        logging.info(f"used regex to extract the video codec: {torrent_info['video_codec']}")
 
     # --- Audio codec stuff here --- #
     audio_codec_dict = {"AC3": "DD", "AC3+": "DD+", "FLAC": "FLAC", "DTS": "DTS", "Dolby Digital Plus": "DD+",
@@ -1025,8 +1042,6 @@ def upload_to_site(upload_to, tracker_api_key):
         review_upload_settings_text_table.add_column("Value (TEXT)", justify="left")
         # Insert the data into the table, raw data (no paths)
         for payload_k, payload_v in sorted(payload.items()):
-            print(payload_k)
-            print(payload_v)
             # Add torrent_info data to each row
             review_upload_settings_text_table.add_row(
                 f"[deep_pink1]{payload_k}[/deep_pink1]",
