@@ -541,12 +541,19 @@ def analyze_video_file(missing_value):
 
         if filename_video_codec_regex is not None:
             rename_codec = {'VC1': 'VC-1', 'MPEG2': 'MPEG-2', 'H264': 'H.264', 'H265': 'H.265'}
-            if str(filename_video_codec_regex.group()) == rename_codec.keys():
-                regex_video_codec = rename_codec[str(filename_video_codec_regex.group())]
-            else:
-                regex_video_codec = str(filename_video_codec_regex.group())
-            logging.info(f"Used regex to identify the video_codec: {regex_video_codec}")
-            return regex_video_codec
+
+            for video_codec in ["HEVC", "AVC", "H265", "H264", "x265", "x264", "MPEG2", "VC1"]:
+                if filename_video_codec_regex.group(video_codec) is not None:
+                    # Now check to see if the 'codec' is in the rename_codec dict we created earlier
+                    if video_codec in rename_codec.keys():
+                        regex_video_codec = rename_codec[video_codec]
+                    else:
+                        # if this executes its AVC/HEVC or x265/x264
+                        regex_video_codec = video_codec
+
+
+                    logging.info(f"Used regex to identify the video_codec: {regex_video_codec}")
+                    return regex_video_codec
 
 
         # If the regex didn't work and the code has reached this point, we will now try pymediainfo
