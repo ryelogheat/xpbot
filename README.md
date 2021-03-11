@@ -179,7 +179,18 @@ Automatically parse, rename, and upload torrents to trackers using the UNIT3D co
    <br />
    <br />
 
-8. **Live / Draft**
+8. **auto_mode_force**
+    * This works in tandem with **auto_mode**, if ```auto_mode=false``` then this won't work
+    * If your torrent has minor issues like we can't auto-detect the *audio_channels*, this will force the upload without that info
+        * e.g. If **pymediainfo** / **ffprobe** / **regex** can not detect the audio_codec this will simply omit the *audio_codec* from the torrent title and finish the upload
+    * **If missing, these can be skipped:**
+        * `audio_codec` `audio_channels` `video_codec (maybe)`
+
+   <br />
+   <br />
+
+
+9. **Live / Draft**
    * This only applies to **BHD** since they are the only supported site that has a **Drafts** page
    * It's recommended to set this to ```False``` for your first few uploads, so you can verify everything is to your liking
 

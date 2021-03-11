@@ -3,3 +3,7 @@
 /config.env
 /upload_script.log
 /.github/
+/temp_upload/description.txt
+/temp_upload/mediainfo.txt
+/images/screenshots/
+/tests.py
