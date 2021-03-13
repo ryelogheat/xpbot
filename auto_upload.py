@@ -733,6 +733,20 @@ def identify_miscellaneous_details():
         pass
 
 
+    # --------- Fix scene group tags --------- #
+    # Scene releases after they unrared are all lowercase (usually) so we fix the torrent title here (Never rename the actual file)
+    scene_group_capitalization = {'glhf': 'GLHF', 'cakes': 'CAKES', 'kogi': 'KOGi', 'bae': 'BAE', 'caffeine': 'CAFFEiNE', 'ggwp': 'GGWP', 'ggez': 'GGEZ', 'syncopy': 'SYNCOPY', 'amrap': 'AMRAP',
+                                  'strontium': 'STRONTiUM'}
+    # Whilst most scene group names are just capitalized but occasionally as you can see ^^ some are not (e.g. KOGi)
+    # either way we don't want to be capitalizing everything (e.g. we want 'NTb' not 'NTB') so we still need a dict of scene groups and their proper capitalization
+    if "release_group" in torrent_info:
+        # compare the release group we extracted to the groups in the dict above ^^
+        if torrent_info["release_group"] in scene_group_capitalization.keys():
+            # replace the "release_group" in torrent_info with the dict value we have
+            torrent_info["release_group"] = scene_group_capitalization[torrent_info["release_group"]]
+
+
+
 
 
 def search_tmdb_for_id(query_title, year, content_type):
