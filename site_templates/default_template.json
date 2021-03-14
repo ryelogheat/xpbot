@@ -4,6 +4,7 @@
   "upload_form": "<HTTPS://DOMAIN.COM/API/UPLOAD/>{api_key}",
   "torrents_search": "<HTTPS://DOMAIN.COM/API/TORRENTS/>{api_key}",
   "source": "<TRACKER_ACRONYM>",
+  "bbcode_line_break": "|  [br][/br]  |  OR  |  <br />  |  (Check which one works)  ",
 
 
   "translation": {

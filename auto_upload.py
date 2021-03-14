@@ -1507,8 +1507,8 @@ console.print(take_upload_screens(duration=torrent_info["duration"],
                                   base_path=working_folder,
                                   discord_url=discord_url
                                   ))
-if os.path.exists(f'{working_folder}/temp_upload/description.txt'):
-    torrent_info["description"] = f'{working_folder}/temp_upload/description.txt'
+if os.path.exists(f'{working_folder}/temp_upload/bbcode_images.txt'):
+    torrent_info["bbcode_images"] = f'{working_folder}/temp_upload/bbcode_images.txt'
 
 
 # -------- If '-d' arg passed, pause here and allow the user to edit description.txt --------
@@ -1539,6 +1539,34 @@ for tracker in upload_to_trackers:
     # Open the correct .json file since we now need things like announce URL, API Keys, and API info
     with open("{}/site_templates/".format(working_folder) + str(acronym_to_tracker.get(str(tracker).lower())) + ".json", "r", encoding="utf-8") as config_file:
         config = json.load(config_file)
+
+
+    # -------- Fill in description.txt --------
+    if "bbcode_images" in torrent_info:
+        # (Theory) BHD has a different bbcode parser then BLU/ACM so the line break is different for each site
+        #   this is why we set it in each sites *.json file then retrieve it here in this 'for loop' since its different for each site
+        bbcode_line_break = config['bbcode_line_break']
+
+        # If the user is uploading to multiple sites we don't want to keep appending to the same description.txt file so remove it each time and write clean bbcode to it
+        #  (Note, this doesn't delete bbcode_images.txt so you aren't uploading the same images multiple times)
+        if os.path.isfile(f'{working_folder}/temp_upload/description.txt'):
+            os.remove(f'{working_folder}/temp_upload/description.txt')
+
+        # Now open up the correct files and format all the bbcode/tags below
+        with open(torrent_info["bbcode_images"], 'r') as bbcode, open(f'{working_folder}/temp_upload/description.txt', 'a') as description:
+            # First add the [center] tags, "Screenshots" header, Size tags etc etc. This only needs to be written once which is why its outside of the 'for loop' below
+            description.write(f'{bbcode_line_break}[center] ---------------------- [size=22]Screenshots[/size] ---------------------- {bbcode_line_break}{bbcode_line_break}')
+
+            # Now write in the actual screenshot bbcode
+            for line in bbcode:
+                description.write(line)
+
+            # Finally append the entire thing with some shameless self promotion ;) & and the closing [/center] tags and some line breaks
+            description.write(f' {bbcode_line_break}{bbcode_line_break} Uploaded with ❤️ using [url=https://github.com/ryelogheat/xpbot]XpBot[/url][/center]')
+
+        # Add the finished file to the 'torrent_info' dict
+        torrent_info["description"] = f'{working_folder}/temp_upload/description.txt'
+
 
     # -------- Check for Dupes --------
     if os.getenv('check_dupes') == 'true':

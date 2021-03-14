@@ -4,6 +4,7 @@
   "upload_form": "https://beyond-hd.me/api/upload/{api_key}",
   "torrents_search": "https://beyond-hd.me/api/torrents/{api_key}",
   "source": "bhd",
+  "bbcode_line_break": "[br][/br]",
 
   "translation": {
     "dot_torrent": "file",

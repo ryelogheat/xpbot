@@ -4,6 +4,7 @@
   "upload_form": "https://asiancinema.me/api/torrents/upload?api_token={api_key}",
   "torrents_search": "https://asiancinema.me/api/torrents/filter?api_token={api_key}",
   "source": "acm",
+  "bbcode_line_break": "<br />",
 
 
   "translation": {

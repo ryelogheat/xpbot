@@ -132,7 +132,9 @@ def take_upload_screens(duration, upload_media_import, torrent_title_import, bas
                         level=logging.INFO,
                         format='%(asctime)s | %(name)s | %(levelname)s | %(message)s')
 
-    load_dotenv("{base_dir}config.env".format(base_dir=base_path))
+    # Open the config
+
+    load_dotenv(f"{base_path}config.env")
     num_of_screenshots = os.getenv("num_of_screenshots")
 
     console.print(f'\n\n[bold]Taking [chartreuse1]{str(num_of_screenshots)}[/chartreuse1] screenshots[/bold]', style="Bold Blue")
@@ -144,8 +146,8 @@ def take_upload_screens(duration, upload_media_import, torrent_title_import, bas
     logging.info("Using {} to generate screenshots".format(upload_media_import))
     # Verify that num_of_screenshots is not set to 0
     if num_of_screenshots == "0":
-        with open(base_path + "/temp_upload/description.txt", "w") as no_images:
-            no_images.write("[center] \n---------------------- [size=22]Screenshots[/size] ----------------------\n[/center]")
+        with open(base_path + "/temp_upload/bbcode_images.txt", "w") as no_images:
+            no_images.write("[b][color=#FF0000][size=22]N/A[/size][/color][/b]")
             no_images.close()
         logging.error('num_of_screenshots is set to 0, continuing without screenshots')
         return "num_of_screenshots is set to 0, continuing without screenshots"
@@ -162,8 +164,8 @@ def take_upload_screens(duration, upload_media_import, torrent_title_import, bas
                 upload_to_host_dict[os.getenv('img_host_{}'.format(host))] = os.getenv('{host_site}_api_key'.format(host_site=os.getenv('img_host_{}'.format(host))))
 
     if len(upload_to_host_dict) == 0:
-        with open(base_path + "/temp_upload/description.txt", "w") as no_images:
-            no_images.write("[center] \n---------------------- [size=22]Screenshots[/size] ----------------------\n[/center]")
+        with open(base_path + "/temp_upload/bbcode_images.txt", "w") as no_images:
+            no_images.write("[b][color=#FF0000][size=22]N/A[/size][/color][/b]")
             no_images.close()
 
         logging.info("All image hosts are disabled by the user so we'll upload the torrent without screenshots")
@@ -180,10 +182,8 @@ def take_upload_screens(duration, upload_media_import, torrent_title_import, bas
     print("\n")
 
 
-    # As to not keep opening and closing description.txt we instead open it now, put in the header and then write in each images bbcode then finally close after the loop
-    with open(base_path + "/temp_upload/description.txt", "w") as write_bbcode_description_txt:
-        # write_bbcode_description_txt = open(base_path + "/temp_upload/description.txt", "w")
-        write_bbcode_description_txt.write("[center] \n ---------------------- [size=22]Screenshots[/size] ---------------------- \n")
+    # As to not keep opening and closing bbcode_images.txt we instead open it now, put in the header and then write in each images bbcode then finally close after the loop
+    with open(base_path + "/temp_upload/bbcode_images.txt", "w") as write_bbcode_description_txt:
 
         # Now we start the actual upload process
         for host_site, host_api in upload_to_host_dict.items():
@@ -207,7 +207,6 @@ def take_upload_screens(duration, upload_media_import, torrent_title_import, bas
 
                         # All images BBCODE has been written in so now we add the closing tags and quit this script since everything is done
                 logging.info("We've uploaded {num_of_uploaded_imgs} to {image_host}".format(num_of_uploaded_imgs=len(upload_status.items()), image_host=host_site))
-                write_bbcode_description_txt.write("[/center]")
                 write_bbcode_description_txt.close()
                 # Update discord channel
                 if discord_url:
