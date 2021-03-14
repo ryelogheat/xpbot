@@ -261,10 +261,9 @@ Automatically parse, rename, and upload torrents to trackers using the UNIT3D co
         * BHD has optional fields that can be assigned to torrents such as:
             * `edition` `region` `pack` `special` `sd` etc
         * None of these are typically *required* when uploading but its good tracker etiquette to be as accurate & complete as possible when uploading
-<br />
-<br />          
-4. When `auto_upload.py` runs, one of the last things we do is format all the data we have into the required API parameters  
-   * **The Process:**
+
+4. When `auto_upload.py` runs, one of the last things we do is format all the data we have into the required API parameters
+    * **The Process:**
     * 1\. We start a loop for every item under `required` in the corresponding `/site_templates/*.json` file
     * 2\. Using the `translation` dict we reverse each required API param into the formatting we use
     * 3\. We try to match each API param (reversed) to key/values in the `torrent_info` dict
