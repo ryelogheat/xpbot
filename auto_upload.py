@@ -82,6 +82,12 @@ if str(os.getenv('auto_mode')).lower() not in ['true', 'false']:
     raise AssertionError("set 'auto_mode' equal to true/false in config.env")
 auto_mode = str(os.getenv('auto_mode')).lower()
 
+# import discord webhook url (if exists)
+if len(os.getenv('DISCORD_WEBHOOK')) != 0:
+    discord_url = str(os.getenv('DISCORD_WEBHOOK'))
+else:
+    discord_url = None
+
 
 # Setup args
 parser = argparse.ArgumentParser()
@@ -374,7 +380,6 @@ def analyze_video_file(missing_value):
     # ---------------- Audio Channels ---------------- #
     if missing_value == "audio_channels":
 
-
         # First try detecting the 'audio_channels' using regex
         if "raw_file_name" in torrent_info:
             # First split the filename by '-' & '.'
@@ -420,6 +425,18 @@ def analyze_video_file(missing_value):
                     audio_channels_ff = str(audio_channel_layout.group())
                     logging.info(f"Used ffmpy.ffprobe to identify audio channels: {audio_channels_ff}")
                     return audio_channels_ff
+
+
+        # Another thing we can try is pymediainfo and count the 'Channel layout' then subtract 1 depending on if 'LFE' is one of them
+        if media_info_audio_track.channel_layout is not None:
+            channel_total = str(media_info_audio_track.channel_layout).split(" ")
+            if 'LFE' in channel_total:
+                audio_channels_pymedia = f'{int(len(channel_total)) - 1}.1'
+            else:
+                audio_channels_pymedia = f'{int(len(channel_total))}.0'
+
+            logging.info(f"Used pymediainfo to identify audio channels: {audio_channels_pymedia}")
+            return audio_channels_pymedia
 
 
         # If no audio_channels have been extracted yet then we try user_input next
@@ -733,10 +750,18 @@ def identify_miscellaneous_details():
         pass
 
 
+    # --------- BHD TAGS --------- #
+    # Currently only BHD supports this feature so this will only apply to BHD
+
+
+
+
+
+
     # --------- Fix scene group tags --------- #
     # Scene releases after they unrared are all lowercase (usually) so we fix the torrent title here (Never rename the actual file)
     scene_group_capitalization = {'glhf': 'GLHF', 'cakes': 'CAKES', 'kogi': 'KOGi', 'bae': 'BAE', 'caffeine': 'CAFFEiNE', 'ggwp': 'GGWP', 'ggez': 'GGEZ', 'syncopy': 'SYNCOPY', 'amrap': 'AMRAP',
-                                  'strontium': 'STRONTiUM'}
+                                  'strontium': 'STRONTiUM', 'kompost': 'KOMPOST'}
     # Whilst most scene group names are just capitalized but occasionally as you can see ^^ some are not (e.g. KOGi)
     # either way we don't want to be capitalizing everything (e.g. we want 'NTb' not 'NTB') so we still need a dict of scene groups and their proper capitalization
     if "release_group" in torrent_info:
@@ -744,6 +769,9 @@ def identify_miscellaneous_details():
         if torrent_info["release_group"] in scene_group_capitalization.keys():
             # replace the "release_group" in torrent_info with the dict value we have
             torrent_info["release_group"] = scene_group_capitalization[torrent_info["release_group"]]
+
+            # Also save the fact that this is a scene group for later (we can add a 'scene' tag later to BHD)
+            torrent_info["scene"] = 'true'
 
 
 
@@ -1011,6 +1039,10 @@ def format_title():
         )
 
     torrent_info["torrent_title"] = ' '.join(title_template.split()).replace(" -", "-")
+    # Update discord channel
+    if discord_url:
+        time.sleep(1)
+        requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content='f'Torrent Title: **{torrent_info["torrent_title"]}**')
 
 
 # ---------------------------------------------------------------------- #
@@ -1265,6 +1297,9 @@ def upload_to_site(upload_to, tracker_api_key):
 
     if response.status_code == 200:
         logging.info(f"upload response for {upload_to}: {response.text.encode('utf8')}")
+        # Update discord channel
+        if discord_url:
+            requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f"content='f'Upload response: **{response.text.encode('utf8')}**")
 
         if "success" in str(response.json()).lower():
             if str(response.json()["success"]).lower() == "true":
@@ -1296,8 +1331,12 @@ def upload_to_site(upload_to, tracker_api_key):
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------#
 #     This is the first code that executes when we run the script, we log that info and we start a timer so we can keep track of total script runtime      #
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------#
-logging.info(f" {'-' * 24} Starting new upload {'-' * 24} ")
 script_start_time = time.perf_counter()
+starting_new_upload = f" {'-' * 24} Starting new upload {'-' * 24} "
+logging.info(starting_new_upload)
+# If a user has supplied a discord webhook URL we can send updates to that channel
+if discord_url:
+    requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content={starting_new_upload}')
 
 # Before anything else lets delete old leftover files & make sure the folders we need exist
 delete_leftover_files()
@@ -1333,8 +1372,7 @@ table.add_column("Site", justify="center")
 table.add_column("URL", justify="center")
 
 for tracker in upload_to_trackers:
-    with open("{}/site_templates/".format(working_folder) + str(acronym_to_tracker.get(str(tracker).lower())) + ".json",
-              "r", encoding="utf-8") as config_file:
+    with open("{}/site_templates/".format(working_folder) + str(acronym_to_tracker.get(str(tracker).lower())) + ".json", "r", encoding="utf-8") as config_file:
         config = json.load(config_file)
     # Add tracker data to each row
     table.add_row(
@@ -1350,7 +1388,7 @@ if auto_mode == "false":
         console.print("\nOK, we will try and upload to these sites now..\n", style="bold blue")
     else:
         logging.info("User canceled upload when asked to confirm sites to upload to")
-        sys.exit(console.print("\nYou didn't reply with 'y' so we are quitting now..\n", style="bold red"))
+        sys.exit(console.print("\nYou didn't reply with 'y' so we are quitting now..\n", style="bold red", highlight=False))
 else:
     console.print("\nOK, we will try and upload to these sites now..\n", style="bold blue")
 
@@ -1401,15 +1439,21 @@ else:
         else:
             torrent_info["upload_media"] = str(f"{os.getenv('upload_dir_path')}{os.listdir(os.getenv('upload_dir_path'))[0]}")
 
+
 # -------- Basic info --------
 # So now we can start collecting info about the file/folder that was supplied to us (Step 1)
 identify_type_and_basic_info(torrent_info["upload_media"])
+# Update discord channel
+if discord_url:
+    requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content=Uploading: **{torrent_info["upload_media"]}**')
+
 
 # -------- Fix/update values --------
 # set the correct video & audio codecs (Dolby Digital --> DDP, use x264 if encode vs remux etc)
-# set_specific_values("specific_source")
-# TODO this is related to the 2 dupe "source" functions that need to be merged
 identify_miscellaneous_details()
+# Update discord channel
+if discord_url:
+    requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content='f'Video Code: **{torrent_info["video_codec"]}**  |  Audio Code: **{torrent_info["audio_codec"]}**')
 
 
 # -------- Get TMDB & IMDB ID --------
@@ -1434,30 +1478,38 @@ else:
     logging.info("We are missing both the 'TMDB' & 'IMDB' ID, trying to identify it via title & year")
     search_tmdb_for_id(query_title=torrent_info["title"], year=torrent_info["year"] if "year" in torrent_info else "",
                        content_type=torrent_info["type"])
+# Update discord channel
+if discord_url:
+    requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content='f'IMDB: **{torrent_info["imdb"]}**  |  TMDB: **{torrent_info["tmdb"]}**')
+
 
 # -------- Use official info from TMDB --------
 compare_tmdb_data_local(torrent_info["type"])
 
 # -------- Format torrent title --------
+# Support for user adding in custom edition if its not obvious from filename
 if args.edition:
     logging.info(f"the user supplied the following edition: {' '.join(args.edition)}")
     console.print(f"\nUsing the user supplied edition: [medium_spring_green]{' '.join(args.edition)}[/medium_spring_green]")
     torrent_info["edition"] = ' '.join(args.edition)
+# Now actually format the title
 format_title()
 
+
 # -------- Take / Upload Screenshots --------
+
 media_info_duration = MediaInfo.parse(torrent_info["raw_video_file"] if "raw_video_file" in torrent_info else torrent_info["upload_media"]).tracks[1]
 torrent_info["duration"] = str(media_info_duration.duration).split(".", 1)[0]  # This is used to evenly space out timestamps for screenshots
-
+# Call function to actually take screenshots & upload them (different file)
 console.print(take_upload_screens(duration=torrent_info["duration"],
-                                  upload_media_import=torrent_info[
-                                      "raw_video_file"] if "raw_video_file" in torrent_info else torrent_info[
-                                      "upload_media"],
+                                  upload_media_import=torrent_info["raw_video_file"] if "raw_video_file" in torrent_info else torrent_info["upload_media"],
                                   torrent_title_import=torrent_info["torrent_title"],
-                                  base_path=working_folder
+                                  base_path=working_folder,
+                                  discord_url=discord_url
                                   ))
 if os.path.exists(f'{working_folder}/temp_upload/description.txt'):
     torrent_info["description"] = f'{working_folder}/temp_upload/description.txt'
+
 
 # -------- If '-d' arg passed, pause here and allow the user to edit description.txt --------
 if args.description and auto_mode == 'false':
@@ -1475,6 +1527,10 @@ logging.info("Now starting tracker specific tasks")
 for tracker in upload_to_trackers:
     temp_tracker_api_key = api_keys_dict[f"{str(tracker).lower()}_api_key"]
     logging.info(f"Trying to upload to: {tracker}")
+
+    # Update discord channel
+    if discord_url:
+        requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content=Uploading to: **{config["name"]}**')
 
     # Create a new dictionary that we store the exact keys/vals that the site is expecting
     tracker_settings = {}
@@ -1499,6 +1555,9 @@ for tracker in upload_to_trackers:
                     f"[red][bold]{dupe_that_exists_title}[/bold][/red] has a similarity percentage of [red][bold]{dupe_that_exists_percentage}%[/bold][/red] (your limit in config.env is [red][bold]{os.getenv('acceptable_similarity_percentage')}%[/bold][/red])",
                     style="blue", highlight=False)
                 console.print(" :warning: Dupe Check Failed :warning: ", style="bold red on white")
+                # Update discord channel
+                if discord_url:
+                    requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content='f'Dupe check failed: **{dupe_that_exists_title}** is a dupe')
                 continue
         else:
             console.print(f":heavy_check_mark: Yay! No dupes found on [bold]{tracker}[/bold], continuing the upload process now\n")
@@ -1576,4 +1635,8 @@ for torrent_info_key, torrent_info_value in sorted(torrent_info.items()):
 console.print(torrent_info_table)
 
 script_end_time = time.perf_counter()
-logging.info(f"Total runtime is {script_end_time - script_start_time:0.4f} seconds")
+total_run_time = f'{script_end_time - script_start_time:0.4f}'
+logging.info(f"Total runtime is {total_run_time} seconds")
+# Update discord channel
+if discord_url:
+    requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content='f'Total runtime: **{total_run_time} seconds**')

@@ -10,9 +10,12 @@ from ffmpy import FFmpeg
 import asyncio
 from rich.console import Console
 from rich.progress import track
+import time
 
 # For more control over rich terminal content, import and construct a Console object.
 console = Console()
+
+
 
 
 def get_ss_range(duration, num_of_screenshots):
@@ -124,7 +127,7 @@ def upload_screens(img_host, api_key, working_folder, torrent_title):
 
 
 
-def take_upload_screens(duration, upload_media_import, torrent_title_import, base_path):
+def take_upload_screens(duration, upload_media_import, torrent_title_import, base_path, discord_url):
     logging.basicConfig(filename=base_path + 'upload_script.log',
                         level=logging.INFO,
                         format='%(asctime)s | %(name)s | %(levelname)s | %(message)s')
@@ -133,6 +136,10 @@ def take_upload_screens(duration, upload_media_import, torrent_title_import, bas
     num_of_screenshots = os.getenv("num_of_screenshots")
 
     console.print(f'\n\n[bold]Taking [chartreuse1]{str(num_of_screenshots)}[/chartreuse1] screenshots[/bold]', style="Bold Blue")
+    # Update discord channel
+    if discord_url:
+        time.sleep(.5)
+        requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content='f'Number of Screenshots: **{num_of_screenshots}**')
 
     logging.info("Using {} to generate screenshots".format(upload_media_import))
     # Verify that num_of_screenshots is not set to 0
@@ -152,8 +159,7 @@ def take_upload_screens(duration, upload_media_import, torrent_title_import, bas
                 logging.error("Can't upload to '{}' without an API key".format(os.getenv('img_host_{}'.format(host))))
             else:
                 # Save the site & api key to upload_to_host_dict
-                upload_to_host_dict[os.getenv('img_host_{}'.format(host))] = os.getenv(
-                    '{host_site}_api_key'.format(host_site=os.getenv('img_host_{}'.format(host))))
+                upload_to_host_dict[os.getenv('img_host_{}'.format(host))] = os.getenv('{host_site}_api_key'.format(host_site=os.getenv('img_host_{}'.format(host))))
 
     if len(upload_to_host_dict) == 0:
         with open(base_path + "/temp_upload/description.txt", "w") as no_images:
@@ -203,7 +209,13 @@ def take_upload_screens(duration, upload_media_import, torrent_title_import, bas
                 logging.info("We've uploaded {num_of_uploaded_imgs} to {image_host}".format(num_of_uploaded_imgs=len(upload_status.items()), image_host=host_site))
                 write_bbcode_description_txt.write("[/center]")
                 write_bbcode_description_txt.close()
+                # Update discord channel
+                if discord_url:
+                    time.sleep(.5)
+                    requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content='f'Uploaded all images to: **{host_site}**')
+
                 return "All images uploaded successfully"
+
             print("Upload to {first_choice} has failed! Going to try the backup now".format(first_choice=host_site))
             logging.error("Upload to {first_choice} has failed".format(first_choice=host_site))
 
@@ -211,4 +223,7 @@ def take_upload_screens(duration, upload_media_import, torrent_title_import, bas
         logging.error("We were unable to upload to any of the enabled image hosts, so we are going to finish the torrent upload without images")
         write_bbcode_description_txt.write("\n[/center]")
         write_bbcode_description_txt.close()
+        # Update discord channel
+        if discord_url:
+            requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content='f'Image upload failed, continuing without them')
         return "We were unable to upload to any of the enabled image hosts, so we are going to finish the torrent upload without images"
