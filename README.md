@@ -263,7 +263,7 @@ Automatically parse, rename, and upload torrents to trackers using the UNIT3D co
         * None of these are typically *required* when uploading but its good tracker etiquette to be as accurate & complete as possible when uploading
 <br />
 <br />          
-4. When `auto_upload.py` runs, one of the last things we do is format all the data we have into the required API parameters
+4. When `auto_upload.py` runs, one of the last things we do is format all the data we have into the required API parameters  
    * **The Process:**
     * 1\. We start a loop for every item under `required` in the corresponding `/site_templates/*.json` file
     * 2\. Using the `translation` dict we reverse each required API param into the formatting we use
@@ -271,8 +271,8 @@ Automatically parse, rename, and upload torrents to trackers using the UNIT3D co
     * 4\. If we get match we assign the value of `torrent_info[API_PARAM_REVERSED]` into a new dict called `tracker_settings`
     * 5\. In the case of no match we just assign a value of `0` 
         * Remember these are **Required** keys so each one must have a value (e.g. `0`)
-          <br />
-          <br />
+
+
 5. **Resolution** & **Source**:  
     **NOTE:** These *definitions* will be different for each site
     * These are a bit tricky since we need to define what a particular source is & what its requirements are
