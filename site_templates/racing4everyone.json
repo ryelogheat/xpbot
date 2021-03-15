@@ -1,0 +1,104 @@
+{
+  "name": "Racing4Everyone",
+  "url": "https://racing4everyone.eu",
+  "upload_form": "https://racing4everyone.eu/api/torrents/upload?api_token={api_key}",
+  "torrents_search": "https://racing4everyone.eu/api/torrents/filter?api_token={api_key}",
+  "source": "R4E",
+  "bbcode_line_break": "<br />",
+  "luv_uu": " ❤ ",
+
+
+  "translation": {
+    "dot_torrent": "torrent",
+    "torrent_title" : "name",
+    "description": "description",
+    "mediainfo": "mediainfo",
+    "type": "category_id",
+    "resolution": "type",
+    "tmdb": "tmdb",
+    "imdb": "imdb",
+    "tvdb": "tvdb",
+    "anon": "anonymous",
+    "sd": "sd",
+    "optimized": "stream",
+
+
+    "live": "<required_key_live>",
+    "mal": "<required_key>",
+    "igdb": "<required_key>",
+    "nfo_file": "<Optional_key>"
+  },
+
+
+
+  "Required": {
+
+    "torrent": "file",
+    "name": "string",
+    "description": "string",
+    "mediainfo": "string",
+
+    "tmdb": "string",
+    "tvdb": "string",
+    "imdb": "string",
+
+    "anonymous": "string",
+    "sd": "string",
+    "stream": "string",
+
+
+
+    "category_id": {
+      "70": "movie",
+      "79": "episode"
+    },
+
+
+
+    "type": {
+      "2160p": {
+        "2160p": 1
+      },
+
+      "1080i": {
+        "1080i": 1
+      },
+
+      "1080p": {
+        "1080p" : 1
+      },
+
+      "720p": {
+        "720p" : 1
+      },
+
+      "SD": {
+        "576p": 2,
+        "576i": 2,
+        "480p": 2,
+        "480i": 2
+      }
+    }
+  },
+
+  "Optional": {
+    "none": "none"
+  },
+
+
+
+  "dupes": {
+    "request": "POST",
+    "keys": {
+      "action": "search",
+      "imdb_id": "string"
+    },
+    "parse_json": {
+      "top_lvl": "results"
+    }
+  }
+
+
+}
+
+
