@@ -766,9 +766,9 @@ def identify_miscellaneous_details():
     # either way we don't want to be capitalizing everything (e.g. we want 'NTb' not 'NTB') so we still need a dict of scene groups and their proper capitalization
     if "release_group" in torrent_info:
         # compare the release group we extracted to the groups in the dict above ^^
-        if torrent_info["release_group"] in scene_group_capitalization.keys():
+        if str(torrent_info["release_group"]).lower() in scene_group_capitalization.keys():
             # replace the "release_group" in torrent_info with the dict value we have
-            torrent_info["release_group"] = scene_group_capitalization[torrent_info["release_group"]]
+            torrent_info["release_group"] = scene_group_capitalization[str(torrent_info["release_group"]).lower()]
 
             # Also save the fact that this is a scene group for later (we can add a 'scene' tag later to BHD)
             torrent_info["scene"] = 'true'
@@ -1106,6 +1106,7 @@ def generate_dot_torrent(file, announce, source, callback=None):
 
 def choose_right_tracker_keys():
     required_items = config["Required"]
+    optional_items = config["Optional"]
 
     # BLU requires the IMDB with the "tt" removed so we do that here, BHD will automatically put the "tt" back in... so we don't need to make an exception for that
     if "imdb" in torrent_info:
@@ -1175,6 +1176,8 @@ def choose_right_tracker_keys():
 
         return target_val
 
+
+    # ------------ required_items ------------
     for required_key, required_value in required_items.items():
         for translation_key, translation_value in config["translation"].items():
             if str(required_key) == str(translation_value):
@@ -1223,6 +1226,50 @@ def choose_right_tracker_keys():
                     tracker_settings[config["translation"][translation_key]] = identify_resolution_source(translation_key)
 
 
+
+    # ------------ optional_items ------------
+    # This mainly applies to BHD since they are the tracker with the most 'Optional' fields, BLU/ACM only have 'nfo_file' as an optional item which we take care of later
+    # It is for this reason ^^ why the following block is coded with BHD specifically in mind
+    for optional_key, optional_value in optional_items.items():
+
+        # -!-!- Editions -!-!- #
+        if optional_key == 'edition' and 'edition' in torrent_info:
+            # First we remove any 'fluff' so that we can try to match the edition to the list BHD has, if not we just upload it as a custom edition
+            local_edition_formatted = str(torrent_info["edition"]).lower().replace("edition", "").replace("cut", "").replace("'", "").replace(" ", "")
+            if local_edition_formatted.endswith('s'):  # Remove extra 's'
+                local_edition_formatted = local_edition_formatted[:-1]
+            # Now check to see if what we got out of the filename already exists on BHD
+            for bhd_edition in optional_value:
+                if str(bhd_edition).lower() == local_edition_formatted:
+                    # If its a match we save the value to tracker_settings here
+                    tracker_settings[optional_key] = bhd_edition
+                    break
+                else:
+                    # We use the 'custom_edition' to set our own, again we only do this if we can't match what BHD already has available to select
+                    tracker_settings["custom_edition"] = torrent_info["edition"]
+
+
+        # -!-!- Region -!-!- # (Disc only)
+        if optional_key == 'region' and 'region' in torrent_info:
+            # This will only run if you are uploading a bluray_disc
+            for region in optional_value:
+                if str(region).upper() == str(torrent_info["region"]).upper():
+                    tracker_settings[optional_key] = region
+                    break
+
+
+        # -!-!- Tags -!-!- #
+        if optional_key == 'tags':
+            # All we currently support regarding tags, is to assign the 'Scene' tag if we are uploading a scene release
+            for tag in optional_value:
+                if str(tag).lower() in str(torrent_info.keys()).lower():
+                    tracker_settings[optional_key] = str(tag)
+                    break
+
+
+
+
+
 # ---------------------------------------------------------------------- #
 #                             Upload that shit!                          #
 # ---------------------------------------------------------------------- #
@@ -1235,7 +1282,14 @@ def upload_to_site(upload_to, tracker_api_key):
     display_files = {}
 
     for key, val in tracker_settings.items():
-        if str(config["Required"][key]) == "file":
+        # First check to see if its a required or optional key
+        if key in config["Required"]:
+            req_opt = 'Required'
+        else:
+            req_opt = 'Optional'
+
+        # Now that we know if we are looking for a required or optional key we can try to add it into the payload
+        if str(config[req_opt][key]) == "file":
             if os.path.isfile(tracker_settings['{}'.format(key)]):
                 post_file = f'{key}', open(tracker_settings[f'{key}'], 'rb')
                 files.append(post_file)
@@ -1546,6 +1600,7 @@ for tracker in upload_to_trackers:
         # (Theory) BHD has a different bbcode parser then BLU/ACM so the line break is different for each site
         #   this is why we set it in each sites *.json file then retrieve it here in this 'for loop' since its different for each site
         bbcode_line_break = config['bbcode_line_break']
+        heart = config['luv_uu']
 
         # If the user is uploading to multiple sites we don't want to keep appending to the same description.txt file so remove it each time and write clean bbcode to it
         #  (Note, this doesn't delete bbcode_images.txt so you aren't uploading the same images multiple times)
@@ -1562,7 +1617,7 @@ for tracker in upload_to_trackers:
                 description.write(line)
 
             # Finally append the entire thing with some shameless self promotion ;) & and the closing [/center] tags and some line breaks
-            description.write(f' {bbcode_line_break}{bbcode_line_break} Uploaded with ❤️ using [url=https://github.com/ryelogheat/xpbot]XpBot[/url][/center]')
+            description.write(f' {bbcode_line_break}{bbcode_line_break} Uploaded with{heart}using [url=https://github.com/ryelogheat/xpbot]XpBot[/url][/center]')
 
         # Add the finished file to the 'torrent_info' dict
         torrent_info["description"] = f'{working_folder}/temp_upload/description.txt'

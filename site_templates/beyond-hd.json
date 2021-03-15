@@ -5,6 +5,8 @@
   "torrents_search": "https://beyond-hd.me/api/torrents/{api_key}",
   "source": "bhd",
   "bbcode_line_break": "[br][/br]",
+  "luv_uu": " [color=red]<3[/color] ",
+
 
   "translation": {
     "dot_torrent": "file",

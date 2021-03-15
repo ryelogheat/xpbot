@@ -5,6 +5,7 @@
   "torrents_search": "https://blutopia.xyz/api/torrents/filter?api_token={api_key}",
   "source": "blu",
   "bbcode_line_break": "<br />",
+  "luv_uu": " ❤ ",
 
 
   "translation": {
