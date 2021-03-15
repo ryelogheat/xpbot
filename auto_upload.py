@@ -1261,11 +1261,22 @@ def choose_right_tracker_keys():
         # -!-!- Tags -!-!- #
         if optional_key == 'tags':
             # All we currently support regarding tags, is to assign the 'Scene' tag if we are uploading a scene release
+            upload_these_tags_list = []
             for tag in optional_value:
-                if str(tag).lower() in str(torrent_info.keys()).lower():
-                    tracker_settings[optional_key] = str(tag)
-                    break
 
+                # This will check for the 'Scene' tag
+                if str(tag).lower() in str(torrent_info.keys()).lower():
+                    upload_these_tags_list.append(str(tag))
+                    # tracker_settings[optional_key] = str(tag)
+
+                # This will check for webdl/webrip tag
+                if str(tag) in ["WEBRip", "WEBDL"]:
+                    # Check if we are uploading one of those ^^ 'sources'
+                    if str(tag).lower() == str(torrent_info["source_type"]).lower():
+                        upload_these_tags_list.append(str(tag))
+                        # tracker_settings[optional_key] = str(tag)
+
+            tracker_settings[optional_key] = ",".join(upload_these_tags_list)
 
 
 
