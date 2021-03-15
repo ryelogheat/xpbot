@@ -36,12 +36,15 @@
     "description": "string",
     "mediainfo": "string",
     "anonymous": "string",
-
     "sd": "string",
+    "stream": "string",
+
+
     "tvdb": "string",
+    "tmdb": "string",
+    "imdb": "string",
     "mal": "string",
     "igdb": "string",
-    "stream": "string",
 
 
 
@@ -113,11 +116,7 @@
         "other": 1
       }
 
-    },
-
-
-    "tmdb": "string",
-    "imdb": "string"
+    }
   },
 
   "Optional": {
