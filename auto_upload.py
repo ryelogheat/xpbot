@@ -1385,11 +1385,12 @@ def choose_right_tracker_keys():
                     # tracker_settings[optional_key] = str(tag)
 
                 # This will check for webdl/webrip tag
-                if str(tag) in ["WEBRip", "WEBDL"]:
-                    # Check if we are uploading one of those ^^ 'sources'
-                    if str(tag).lower() == str(torrent_info["source_type"]).lower():
-                        upload_these_tags_list.append(str(tag))
-                        # tracker_settings[optional_key] = str(tag)
+                # TODO I think BHD has a bug that isn't accepting these, If I pass them in the API I see they are highlighted when editing the torrent, but just regular viewing doesn't show either
+                #  Upon manually removing the webrip/webdl tag, BHD automatically sets them. I'll leave them disabled for now
+                # if str(tag) in ["WEBRip", "WEBDL"]:
+                #     # Check if we are uploading one of those ^^ 'sources'
+                #     if str(tag).lower() == str(torrent_info["source_type"]).lower():
+                #         upload_these_tags_list.append(str(tag))
 
             tracker_settings[optional_key] = ",".join(upload_these_tags_list)
 
@@ -1725,7 +1726,6 @@ for file in upload_queue:
             # (Theory) BHD has a different bbcode parser then BLU/ACM so the line break is different for each site
             #   this is why we set it in each sites *.json file then retrieve it here in this 'for loop' since its different for each site
             bbcode_line_break = config['bbcode_line_break']
-            heart = config['luv_uu']
 
             # If the user is uploading to multiple sites we don't want to keep appending to the same description.txt file so remove it each time and write clean bbcode to it
             #  (Note, this doesn't delete bbcode_images.txt so you aren't uploading the same images multiple times)
@@ -1742,7 +1742,7 @@ for file in upload_queue:
                     description.write(line)
 
                 # Finally append the entire thing with some shameless self promotion ;) & and the closing [/center] tags and some line breaks
-                description.write(f' {bbcode_line_break}{bbcode_line_break} Uploaded with{heart}using [url=https://github.com/ryelogheat/xpbot]XpBot[/url][/center]')
+                description.write(f' {bbcode_line_break}{bbcode_line_break} Uploaded with {"[color=red]<3[/color]" if str(tracker).upper() == "BHD" else "❤"} using [url=https://github.com/ryelogheat/xpbot]XpBot[/url][/center]')
 
             # Add the finished file to the 'torrent_info' dict
             torrent_info["description"] = f'{working_folder}/temp_upload/description.txt'
