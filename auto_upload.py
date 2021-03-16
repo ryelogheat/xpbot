@@ -547,7 +547,8 @@ def analyze_video_file(missing_value):
     if missing_value == "audio_codec":
 
         # We store some common audio code translations in this dict
-        audio_codec_dict = {"AC3": "DD", "AC3+": "DD+", "Dolby Digital Plus": "DD+", "Dolby Digital": "DD", "AAC": "AAC", "AC-3": "DD", "FLAC": "FLAC", "DTS": "DTS", "Opus": "Opus", "E-AC-3": "DD+"}
+        audio_codec_dict = {"AC3": "DD", "AC3+": "DD+", "Dolby Digital Plus": "DD+", "Dolby Digital": "DD", "AAC": "AAC", "AC-3": "DD", "FLAC": "FLAC", "DTS": "DTS", "Opus": "Opus", "E-AC-3": "DD+", "A_EAC3": "DD+",
+                            "A_AC3": "DD"}
 
         # First check to see if GuessIt inserted an audio_codec into torrent_info and if it did then we can verify its formatted correctly
         if "audio_codec" in torrent_info:
@@ -572,13 +573,21 @@ def analyze_video_file(missing_value):
 
         # Now we try to identify the audio_codec using pymediainfo
         if media_info_audio_track is not None:
-            if media_info_audio_track.codec is not None:
+
+            if media_info_audio_track.codec_id is not None:
+                # The release "La.La.Land.2016.1080p.UHD.BluRay.DDP7.1.HDR.x265-NCmt.mkv" when using media_info_audio_track.codec shows the codec as AC3 not EAC3..
+                # so well try to use media_info_audio_track.codec_id first
+                audio_codec = media_info_audio_track.codec_id
+
+            elif media_info_audio_track.codec is not None:
                 # On rare occasion *.codec is not available and we need to use *.format
                 audio_codec = media_info_audio_track.codec
-            # Only use *.format if *.codec is unavailable
+
             elif media_info_audio_track.format is not None:
+                # Only use *.format if *.codec is unavailable
                 audio_codec = media_info_audio_track.format
-            # Set audio_codec equal to None if neither of those two ^^ exist and we'll move onto user input
+
+            # Set audio_codec equal to None if neither of those three ^^ exist and we'll move onto user input
             else:
                 audio_codec = None
         else:
@@ -621,7 +630,6 @@ def analyze_video_file(missing_value):
                 # Now its a bit of a Hail Mary and we try to match whatever pymediainfo returned to our audio_codec_dict/translation
                 logging.info(f'Used (pymediainfo + audio_codec_dict) to identify the audio codec: {audio_codec_dict[audio_codec]}')
                 return audio_codec_dict[audio_codec]
-
 
 
         # If the audio_codec has not been extracted yet then we try user_input
@@ -832,7 +840,7 @@ def identify_miscellaneous_details():
 
     # Try to split the torrent title and match a few key words
     # End user can add their own 'key_words' that they might want to extract and add to the final torrent title
-    key_words = {'remux': 'Remux', 'hdr': 'HDR', 'uhd': 'UHD', 'hybrid': 'Hybrid', 'atmos': 'Atmos'}
+    key_words = {'remux': 'REMUX', 'hdr': 'HDR', 'uhd': 'UHD', 'hybrid': 'Hybrid', 'atmos': 'Atmos'}
 
     hdr_hybrid_remux_keyword_search = str(torrent_info["raw_file_name"]).replace(" ", ".").replace("-", ".").split(".")
 
@@ -1084,86 +1092,67 @@ def compare_tmdb_data_local(content_type):
 
 
 def format_title(json_config):
-    # Some things are pretty much universally followed and we can rename certain values here before we set the final torrent name
 
-    # If the user is uploading a full bluray disc we want to type bluray with a dash in between blu & ray (Blu-ray)
-    # For all other bluray content (remux or encode) we use the full word "Bluray"
-
-
+    # ------------------ Load correct "naming config" ------------------ #
+    # Here we open the uploads corresponding .json file and using the current uploads "source" we pull in a custom naming config
+    # this "naming config" can individually tweaked for each site & "content_type" (bluray_encode, web, etc)
     tracker_torrent_name_style_config = torrent_info["source_type"] if str(torrent_info["source"]).lower() != "web" else "web"
     tracker_torrent_name_style = json_config['torrent_title_format'][torrent_info["type"]][tracker_torrent_name_style_config]
 
 
+
+    # ------------------ Set some default naming styles here ------------------ #
+    # Fix Bluray
     if "bluray" in torrent_info["source_type"]:
         if "disc" in torrent_info["source_type"]:
+            # Raw bluray discs have a "-" between the words "Blu" & "Ray"
             torrent_info["source"] = "Blu-ray"
         else:
+            # Bluray encodes & Remuxs just use the complete word "Bluray"
             torrent_info["source"] = "Bluray"
 
-
+    # Now fix WEB
     if str(torrent_info["source"]).lower() == "web":
         if torrent_info["source_type"] == "webrip":
             torrent_info["web_type"] = "WEBRip"
         else:
             torrent_info["web_type"] = "WEB-DL"
 
-
+    # Fix DVD
     if str(torrent_info["source"]).lower() == "dvd":
-        # if torrent_info["source_type"] == "dvd_remux" or torrent_info["source_type"] == "dvd_disc":
         if torrent_info["source_type"] in ('dvd_remux', 'dvd_disc'):
+            # later in the script if this ends up being a DVD Remux we will add the tag "Remux" to the torrent title
             torrent_info["source"] = "DVD"
         else:
+            # Anything else is just a dvdrip
             torrent_info["source"] = "DVDRip"
 
 
-    if torrent_info["type"] == "movie":
-        title_template = (tracker_torrent_name_style.format(
-            title=torrent_info["title"],
-            year=torrent_info["year"] if "year" in torrent_info else "",
-            edition=torrent_info["edition"] if "edition" in torrent_info else "",
-            repack=torrent_info["repack"] if "repack" in torrent_info else "",
-            source=torrent_info["source"] if "source" in torrent_info and "web_type" not in torrent_info else "",
-            resolution=torrent_info["screen_size"],
-            region=torrent_info["region"] if "region" in torrent_info else "",
-            uhd=torrent_info["uhd"] if "uhd" in torrent_info else "",
-            web_source=torrent_info["web_source"] if "web_source" in torrent_info else "",
-            web_type=torrent_info["web_type"] if "web_type" in torrent_info else "",
-            audio_codec=torrent_info["audio_codec"],
-            atmos=torrent_info["atmos"] if "atmos" in torrent_info else "",
-            hdr=torrent_info["hdr"] if "hdr" in torrent_info else "",
-            audio_channels=torrent_info["audio_channels"],
-            dv=torrent_info["dv"] if "dv" in torrent_info else "",
-            video_codec=torrent_info["video_codec"],
-            hybrid=torrent_info["hybrid"] if "hybrid" in torrent_info else "",
-            remux=str(torrent_info["remux"]).upper() if "remux" in torrent_info else "",
-            group=f'-{torrent_info["release_group"]}' if "release_group" in torrent_info else "")
-            )
-    else:
-        # tv
-        title_template = (tracker_torrent_name_style.format(
-            title=torrent_info["title"],
-            year=torrent_info["year"] if "year" in torrent_info else "",
-            season_or_episode=torrent_info["s00e00"],
-            repack=torrent_info["repack"] if "repack" in torrent_info else "",
-            resolution=torrent_info["screen_size"],
-            region=torrent_info["region"] if "region" in torrent_info else "",
-            uhd=torrent_info["uhd"] if "uhd" in torrent_info else "",
-            source=torrent_info["source"] if "source" in torrent_info and "web_type" not in torrent_info else "",
-            web_source=torrent_info["web_source"] if "web_source" in torrent_info else "",
-            web_type=torrent_info["web_type"] if "web_type" in torrent_info else "",
-            audio_codec=torrent_info["audio_codec"],
-            atmos=torrent_info["atmos"] if "atmos" in torrent_info else "",
-            hdr=torrent_info["hdr"] if "hdr" in torrent_info else "",
-            audio_channels=torrent_info["audio_channels"],
-            dv=torrent_info["dv"] if "dv" in torrent_info else "",
-            video_codec=torrent_info["video_codec"],
-            hybrid=torrent_info["hybrid"] if "hybrid" in torrent_info else "",
-            remux=str(torrent_info["remux"]).upper() if "remux" in torrent_info else "",
-            group=f'-{torrent_info["release_group"]}' if "release_group" in torrent_info else "")
-            )
+
+    # ------------------ Actual format the title now ------------------ #
+
+    # Firstly we have a dict of all the torrent_info keys that are directly relevant to the torrent title
+    # all_keys = {"title": "title", "year": "year", "edition": "edition", "season_or_episode": "s00e00", "repack": "repack", "screen_size": "screen_size", "region": "region", "uhd": "uhd",
+    #             "hybrid": "hybrid", "source": "source", "remux": "remux", "web_source": "web_source", "web_type": "web_type", "audio_codec": "audio_codec",
+    #             "atmos": "atmos", "audio_channels": "audio_channels", "hdr": "hdr", "dv": "dv", "video_codec": "video_codec", "group": "release_group"}
 
 
-    torrent_info["torrent_title"] = ' '.join(title_template.split()).replace(" -", "-")
+    # This dict will store the "torrent_info" response for each item in the "naming config"
+    generate_format_string = {}
+
+    temp_load_torrent_info = tracker_torrent_name_style.replace("{", "").replace("}", "").split(" ")
+    for item in temp_load_torrent_info:
+        # Here is were we actual get the torrent_info response and add it to the "generate_format_string" dict we declared earlier
+        generate_format_string[item] = torrent_info[item] if item in torrent_info else ""
+
+    formatted_title = ""  # This is the final torrent title, we add any info we get from "torrent_info" to it using the "for loop" below
+    for key, value in generate_format_string.items():
+        if len(value) != 0:  # ignore no matches (e.g. most TV Shows don't have the "year" added to its title so unless it was directly specified in the filename we also ignore it)
+            formatted_title = f'{formatted_title}{"-" if key == "release_group" else " "}{value}'
+
+    # Finally save the "formatted_title" into torrent_info which later will get passed to the dict "tracker_settings" which is used to store the payload for the actual POST upload request
+    torrent_info["torrent_title"] = str(formatted_title[1:])
+
     # Update discord channel
     if discord_url:
         time.sleep(1)
