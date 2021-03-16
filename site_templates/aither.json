@@ -1,0 +1,139 @@
+{
+  "name": "Aither",
+  "url": "https://aither.cc",
+  "upload_form": "https://aither.cc/api/torrents/upload?api_token={api_key}",
+  "torrents_search": "https://aither.cc/api/torrents/filter?api_token={api_key}",
+  "source": "Aither",
+  "bbcode_line_break": "<br />",
+  "luv_uu": " ❤ ",
+
+  "translation": {
+    "dot_torrent": "torrent",
+    "torrent_title" : "name",
+    "description": "description",
+    "mediainfo": "mediainfo",
+    "type": "category_id",
+    "source": "type_id",
+    "resolution": "resolution_id",
+    "tmdb": "tmdb",
+    "imdb": "imdb",
+    "tvdb": "tvdb",
+    "mal": "mal",
+    "igdb": "igdb",
+    "anon": "anonymous",
+    "live": "live",
+    "sd": "sd",
+    "optimized": "stream",
+    "nfo_file": "nfo"
+  },
+
+  "Required": {
+    "torrent": "file",
+    "name": "string",
+    "description": "string",
+    "mediainfo": "string",
+    "anonymous": "string",
+    "sd": "string",
+    "stream": "string",
+    "tvdb": "string",
+    "tmdb": "string",
+    "imdb": "string",
+    "mal": "string",
+    "igdb": "string",
+
+    "category_id": {
+      "1": "movie",
+      "2": "episode"
+    },
+
+    "type_id": {
+      "1": {
+        "bluray_disc": 1
+      },
+      "2": {
+        "bluray_remux": 1
+      },
+      "3": {
+        "bluray_encode": 1
+      },
+      "4": {
+        "webdl": 1
+      },
+      "5": {
+        "webrip": 1
+      },
+      "6": {
+        "hdtv": 1
+      }
+    },
+
+
+    "resolution_id": {
+      "1": {
+        "4360p": 1
+      },
+
+      "2": {
+        "2160p": 1
+      },
+
+      "3": {
+        "1080p" : 1
+      },
+
+      "4": {
+        "1080i" : 1
+      },
+
+      "5": {
+        "720p" : 1
+      },
+
+      "6": {
+        "576p" : 1
+      },
+
+      "7": {
+        "576i": 1
+      },
+
+      "8": {
+        "480p": 1
+      },
+
+      "9": {
+        "480i": 1
+      },
+
+      "10": {
+        "other": 1
+      }
+
+    }
+  },
+
+  "Optional": {
+    "nfo_file": "file"
+  },
+
+  "dupes": {
+    "request": "GET",
+    "url_format": "{search_url}&imdb={imdb}",
+
+    "parse_json": {
+      "top_lvl": "data",
+      "torrent_details": "attributes"
+    },
+
+    "different_cuts": "1",
+    "2160p_remux": 1,
+    "2160p_encode": 1,
+    "1080p_remux": 1,
+    "1080p_encode": 100,
+    "720p_encode": 100,
+    "else": 1
+  },
+
+  "banned_groups": []
+
+}
