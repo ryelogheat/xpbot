@@ -98,7 +98,8 @@ parser.add_argument('-tmdb', nargs=1, help="Use this to manually provide the TMD
 parser.add_argument('-imdb', nargs=1, help="Use this to manually provide the IMDB ID")
 parser.add_argument('-t', '--trackers', nargs='*', required=True, help="Tracker(s) to upload to. Space-separates if multiple (no commas)")
 parser.add_argument('-anon', action='store_true', help="if you want your upload to be anonymous (no other info needed, just input '-anon'")
-parser.add_argument('-path', nargs=1, help="Use this to provide path to file/folder")
+parser.add_argument('-p', '--path', nargs='*', required=True, help="Use this to provide path to file/folder")
+parser.add_argument('-batch', action='store_true', help="Pass this arg if you want to upload all the files/folder within the folder you specify with the '-p' arg'")
 parser.add_argument('-e', '--edition', nargs='*', help="Manually provide an 'edition' (e.g. Criterion Collection, Extended, Remastered, etc)")
 parser.add_argument('-disc', action='store_true', help="If you are uploading a raw dvd/bluray disc you need to pass this arg")
 args = parser.parse_args()
@@ -808,12 +809,6 @@ def identify_miscellaneous_details():
                 torrent_info["bluray_disc_type"] = str(f'{bluray_prefix}_{possible_type}')
                 break
 
-
-
-
-
-
-
     # Bluray disc regions
     bluray_region = {
         "USA": "USA",
@@ -1243,7 +1238,7 @@ def choose_right_tracker_keys():
     for torrent_info_k in torrent_info:
         if torrent_info_k in ["source_type", "screen_size", "bluray_disc_type"]:
             relevant_torrent_info_values.append(torrent_info[torrent_info_k])
-    print(relevant_torrent_info_values)
+
     def identify_resolution_source(target_val):
         # 0 = optional
         # 1 = required
@@ -1525,9 +1520,6 @@ logging.info(starting_new_upload)
 if discord_url:
     requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content={starting_new_upload}')
 
-# Before anything else lets delete old leftover files & make sure the folders we need exist
-delete_leftover_files()
-
 # Verify we support the tracker specified
 upload_to_trackers = []
 for tracker in args.trackers:
@@ -1569,6 +1561,7 @@ for tracker in upload_to_trackers:
     )
 # Show the user the sites we will upload to
 console.print(table)
+
 # If not in 'auto_mode' then verify with the user that they want to continue with the upload
 if auto_mode == "false":
     if Confirm.ask("Continue upload to these sites?", default='y'):
@@ -1579,269 +1572,328 @@ if auto_mode == "false":
 else:
     console.print("\nOK, we will try and upload to these sites now..\n", style="bold blue")
 
+
 # The user has confirmed what sites to upload to at this point (or auto_mode is set to true)
 # Get media file details now, first we check if the user manually provides the path to some media
 # if the user didn't then we try and upload whatever is in the 'upload_dir_path' (if specified in config.env)
-if args.path:
-    # The arg input is returned as a list even if it is just 1 item
-    try:
-        # if len(upload_to_trackers) == 0 that means that the user either didn't provide any site at all, the site is not supported, or the API key isn't provided
-        if not os.path.exists(args.path[0]):
-            raise AssertionError("The '-path' you provided does not exist, try again")
-    except AssertionError as err:  # Log AssertionError in the logfile and quit here
-        logging.exception("The '-path' you provided does not exist, try again")
-        raise err
-    # If the AssertionError hasn't been thrown yet that means that the content exists and we can save the path to the dict 'torrent_info'
-    torrent_info["upload_media"] = args.path[0]
+
+
+
+
+# TODO make args.path required, tbh a user has to specify which trackers they wanna upload to so they can also specify the path at the same time
+
+# ---------- Batch mode prep ---------- #
+if args.batch and len(args.path) > 1:
+    logging.critical("the arg '-batch' can not be run with multiple '-path' args")
+    logging.info("the arg '-batch' should be used to upload all the files in 1 folder that you specify with the '-path' arg")
+    console.print("You can not use the arg [deep_sky_blue1]-batch[/deep_sky_blue1] while supplying multiple [deep_sky_blue1]-path[/deep_sky_blue1] args\n", style='bright_red')
+    console.print("Exiting...\n", style='bright_red bold')
+    sys.exit()
+
+
+elif args.batch and not os.path.isdir(args.path[0]):
+    # Since args.path is required now, we don't need to check if len(args.path) == 0 since that's impossible
+    # instead we check to see if its a folder, if not then
+    logging.critical("the arg '-batch' can not be run an a single video file")
+    logging.info("the arg '-batch' should be used to upload all the files in 1 folder that you specify with the '-path' arg")
+    console.print("We can not [deep_sky_blue1]-batch[/deep_sky_blue1] upload a single video file, [deep_sky_blue1]-batch[/deep_sky_blue1] is supposed to be used on a "
+                  "single folder containing multiple files you want to individually upload\n", style='bright_red')
+    console.print("Exiting...\n", style='bright_red bold')
+    sys.exit()
+
+
+
+upload_queue = []
+
+if args.batch:
+    # This should be OK to upload, we've caught all the obvious issues above ^^ so if this runs then it should be OK
+    for arg_file in glob.glob(f'{args.path[0]}/*'):
+        upload_queue.append(arg_file)
 else:
-    # input arg hasn't been supplied so try the 'upload_dir_path' path now
-    try:
-        # if len(upload_to_trackers) == 0 that means that the user either didn't provide any site at all, the site is not supported, or the API key isn't provided
-        if not os.path.exists(os.getenv('upload_dir_path')):
-            raise AssertionError("The upload dir '{}' does not exist & '-path' was not used to specify a file/folder to upload".format(os.getenv('upload_dir_path')))
-    except AssertionError as err:  # Log AssertionError in the logfile and quit here
-        logging.exception("You did not provide a valid path/file for us to upload")
-        raise err
-    # If the AssertionError hasn't been thrown yet that means that the path exists, we now need to select a particular file/folder from that path
-
-    if len(os.listdir(os.getenv('upload_dir_path'))) > 1:
-        logging.critical('You can only have 1 file or folder in the "upload" folder at a time..')
-        logging.info('you need to remove some of these files {list_files} until only 1 folder/file is left'.format(
-            list_files=os.listdir(os.getenv('upload_dir_path'))))
-
-        console.print(
-            "\n[bold][red]You need to choose & remove [green]{num_until_1}[/green] of the following files/folders from the upload_dir_path location:[/red][/bold]\n"
-            "{list_files}".format(
-                num_until_1=int(len(os.listdir(os.getenv('upload_dir_path'))) - 1),
-                list_files=os.listdir(os.getenv('upload_dir_path'))
-            ))
-        sys.exit(console.print("\nYou can only have 1 file or folder in the 'upload' folder at a time... quitting now\n", style="bold red"))
-    elif len(os.listdir(os.getenv('upload_dir_path'))) < 1:
-        logging.critical("No files/folders found in the 'upload' folder... quitting now")
-        sys.exit(console.print("\nNo files/folders found in the 'upload' folder... quitting now\n", style="bold red"))
-    else:
-        # Sigh... Some people are not going to use a trailing forward slash so we do that here real quick
-        if not str(f"{os.getenv('upload_dir_path')}{os.listdir(os.getenv('upload_dir_path'))[0]}").endswith("/"):
-            torrent_info["upload_media"] = str(f"{os.getenv('upload_dir_path')}/{os.listdir(os.getenv('upload_dir_path'))[0]}")
-        else:
-            torrent_info["upload_media"] = str(f"{os.getenv('upload_dir_path')}{os.listdir(os.getenv('upload_dir_path'))[0]}")
+    for arg_file in args.path:
+        upload_queue.append(arg_file)
 
 
-# -------- Basic info --------
-# So now we can start collecting info about the file/folder that was supplied to us (Step 1)
-identify_type_and_basic_info(torrent_info["upload_media"])
-# Update discord channel
-if discord_url:
-    requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content=Uploading: **{torrent_info["upload_media"]}**')
+
+for file in upload_queue:
+    delete_leftover_files()
+    torrent_info.clear()
+
+    torrent_info["upload_media"] = file
 
 
-# -------- Fix/update values --------
-# set the correct video & audio codecs (Dolby Digital --> DDP, use x264 if encode vs remux etc)
-identify_miscellaneous_details()
-# Update discord channel
-if discord_url:
-    requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content='f'Video Code: **{torrent_info["video_codec"]}**  |  Audio Code: **{torrent_info["audio_codec"]}**')
 
 
-# -------- Get TMDB & IMDB ID --------
-# If the TMDB/IMDB was not supplied then we need to search TMDB for it using the title & year
-for media_id_key, media_id_val in {"tmdb": args.tmdb, "imdb": args.imdb}.items():
-    if media_id_val is not None and len(
-            media_id_val[0]) > 1:  # we include ' > 1 ' to prevent blank ID's and issues later
-        torrent_info[media_id_key] = media_id_val[0]
-
-if all(x in torrent_info for x in ['imdb', 'tmdb']):
-    # This means both the TMDB & IMDB ID are already in the torrent_info dict
-    logging.info("Both TMDB & IMDB ID have been supplied by the user, so no need to make any TMDB API request")
-elif any(x in torrent_info for x in ['imdb', 'tmdb']):
-    # This means we can skip the search via title/year and instead use whichever ID to get the other (tmdb -> imdb and vice versa)
-    missing_id_key = 'tmdb' if 'imdb' in torrent_info else 'imdb'
-    existing_id_key = 'tmdb' if 'tmdb' in torrent_info else 'imdb'
-    logging.info(f"We are missing '{missing_id_key}' starting TMDB API request now")
-    # Now we call the function that will use the TMDB API to get whichever ID we are missing
-    torrent_info[missing_id_key] = get_external_id(id_site=existing_id_key, id_value=torrent_info[existing_id_key],
-                                                   content_type=torrent_info["type"])
-else:
-    logging.info("We are missing both the 'TMDB' & 'IMDB' ID, trying to identify it via title & year")
-    search_tmdb_for_id(query_title=torrent_info["title"], year=torrent_info["year"] if "year" in torrent_info else "",
-                       content_type=torrent_info["type"])
-# Update discord channel
-if discord_url:
-    requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content='f'IMDB: **{torrent_info["imdb"]}**  |  TMDB: **{torrent_info["tmdb"]}**')
-
-
-# -------- Use official info from TMDB --------
-compare_tmdb_data_local(torrent_info["type"])
-
-# -------- Format torrent title --------
-# Support for user adding in custom edition if its not obvious from filename
-if args.edition:
-    logging.info(f"the user supplied the following edition: {' '.join(args.edition)}")
-    console.print(f"\nUsing the user supplied edition: [medium_spring_green]{' '.join(args.edition)}[/medium_spring_green]")
-    torrent_info["edition"] = ' '.join(args.edition)
-# Now actually format the title
-format_title()
-
-
-# -------- Take / Upload Screenshots --------
-
-media_info_duration = MediaInfo.parse(torrent_info["raw_video_file"] if "raw_video_file" in torrent_info else torrent_info["upload_media"]).tracks[1]
-torrent_info["duration"] = str(media_info_duration.duration).split(".", 1)[0]  # This is used to evenly space out timestamps for screenshots
-# Call function to actually take screenshots & upload them (different file)
-console.print(take_upload_screens(duration=torrent_info["duration"],
-                                  upload_media_import=torrent_info["raw_video_file"] if "raw_video_file" in torrent_info else torrent_info["upload_media"],
-                                  torrent_title_import=torrent_info["torrent_title"],
-                                  base_path=working_folder,
-                                  discord_url=discord_url
-                                  ))
-if os.path.exists(f'{working_folder}/temp_upload/bbcode_images.txt'):
-    torrent_info["bbcode_images"] = f'{working_folder}/temp_upload/bbcode_images.txt'
+# if args.path:
+#     print(args.path)
+#     print(len(args.path))
+#
+#     quit()
+#     # The arg input is returned as a list even if it is just 1 item
+#     try:
+#         if not os.path.exists(args.path[0]):
+#             raise AssertionError("The '-path' you provided does not exist, try again")
+#     except AssertionError as err:  # Log AssertionError in the logfile and quit here
+#         logging.exception("The '-path' you provided does not exist, try again")
+#         raise err
+#     # If the AssertionError hasn't been thrown yet that means that the content exists and we can save the path to the dict 'torrent_info'
+#     torrent_info["upload_media"] = args.path[0]
+# else:
+#     # input arg hasn't been supplied so try the 'upload_dir_path' path now
+#     try:
+#         # if len(upload_to_trackers) == 0 that means that the user either didn't provide any site at all, the site is not supported, or the API key isn't provided
+#         if not os.path.exists(os.getenv('upload_dir_path')):
+#             raise AssertionError("The upload dir '{}' does not exist & '-path' was not used to specify a file/folder to upload".format(os.getenv('upload_dir_path')))
+#     except AssertionError as err:  # Log AssertionError in the logfile and quit here
+#         logging.exception("You did not provide a valid path/file for us to upload")
+#         raise err
+#     # If the AssertionError hasn't been thrown yet that means that the path exists, we now need to select a particular file/folder from that path
+#
+#     if len(os.listdir(os.getenv('upload_dir_path'))) > 1:
+#         logging.critical('You can only have 1 file or folder in the "upload" folder at a time..')
+#         logging.info('you need to remove some of these files {list_files} until only 1 folder/file is left'.format(
+#             list_files=os.listdir(os.getenv('upload_dir_path'))))
+#
+#         console.print(
+#             "\n[bold][red]You need to choose & remove [green]{num_until_1}[/green] of the following files/folders from the upload_dir_path location:[/red][/bold]\n"
+#             "{list_files}".format(
+#                 num_until_1=int(len(os.listdir(os.getenv('upload_dir_path'))) - 1),
+#                 list_files=os.listdir(os.getenv('upload_dir_path'))
+#             ))
+#         sys.exit(console.print("\nYou can only have 1 file or folder in the 'upload' folder at a time... quitting now\n", style="bold red"))
+#     elif len(os.listdir(os.getenv('upload_dir_path'))) < 1:
+#         logging.critical("No files/folders found in the 'upload' folder... quitting now")
+#         sys.exit(console.print("\nNo files/folders found in the 'upload' folder... quitting now\n", style="bold red"))
+#     else:
+#         # Sigh... Some people are not going to use a trailing forward slash so we do that here real quick
+#         if not str(f"{os.getenv('upload_dir_path')}{os.listdir(os.getenv('upload_dir_path'))[0]}").endswith("/"):
+#             torrent_info["upload_media"] = str(f"{os.getenv('upload_dir_path')}/{os.listdir(os.getenv('upload_dir_path'))[0]}")
+#         else:
+#             torrent_info["upload_media"] = str(f"{os.getenv('upload_dir_path')}{os.listdir(os.getenv('upload_dir_path'))[0]}")
 
 
-# At this point the only stuff that remains to be done is site specific so we can start a loop here for each site we are uploading to
-logging.info("Now starting tracker specific tasks")
-for tracker in upload_to_trackers:
-    temp_tracker_api_key = api_keys_dict[f"{str(tracker).lower()}_api_key"]
-    logging.info(f"Trying to upload to: {tracker}")
 
+
+
+
+
+
+
+    # -------- Basic info --------
+    # So now we can start collecting info about the file/folder that was supplied to us (Step 1)
+    identify_type_and_basic_info(torrent_info["upload_media"])
     # Update discord channel
     if discord_url:
-        requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content=Uploading to: **{config["name"]}**')
-
-    # Create a new dictionary that we store the exact keys/vals that the site is expecting
-    tracker_settings = {}
-    tracker_settings.clear()
-
-    # Open the correct .json file since we now need things like announce URL, API Keys, and API info
-    with open("{}/site_templates/".format(working_folder) + str(acronym_to_tracker.get(str(tracker).lower())) + ".json", "r", encoding="utf-8") as config_file:
-        config = json.load(config_file)
+        requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content=Uploading: **{torrent_info["upload_media"]}**')
 
 
-    # -------- Fill in description.txt --------
-    if "bbcode_images" in torrent_info:
-        # (Theory) BHD has a different bbcode parser then BLU/ACM so the line break is different for each site
-        #   this is why we set it in each sites *.json file then retrieve it here in this 'for loop' since its different for each site
-        bbcode_line_break = config['bbcode_line_break']
-        heart = config['luv_uu']
-
-        # If the user is uploading to multiple sites we don't want to keep appending to the same description.txt file so remove it each time and write clean bbcode to it
-        #  (Note, this doesn't delete bbcode_images.txt so you aren't uploading the same images multiple times)
-        if os.path.isfile(f'{working_folder}/temp_upload/description.txt'):
-            os.remove(f'{working_folder}/temp_upload/description.txt')
-
-        # Now open up the correct files and format all the bbcode/tags below
-        with open(torrent_info["bbcode_images"], 'r') as bbcode, open(f'{working_folder}/temp_upload/description.txt', 'a') as description:
-            # First add the [center] tags, "Screenshots" header, Size tags etc etc. This only needs to be written once which is why its outside of the 'for loop' below
-            description.write(f'{bbcode_line_break}[center] ---------------------- [size=22]Screenshots[/size] ---------------------- {bbcode_line_break}{bbcode_line_break}')
-
-            # Now write in the actual screenshot bbcode
-            for line in bbcode:
-                description.write(line)
-
-            # Finally append the entire thing with some shameless self promotion ;) & and the closing [/center] tags and some line breaks
-            description.write(f' {bbcode_line_break}{bbcode_line_break} Uploaded with{heart}using [url=https://github.com/ryelogheat/xpbot]XpBot[/url][/center]')
-
-        # Add the finished file to the 'torrent_info' dict
-        torrent_info["description"] = f'{working_folder}/temp_upload/description.txt'
+    # -------- Fix/update values --------
+    # set the correct video & audio codecs (Dolby Digital --> DDP, use x264 if encode vs remux etc)
+    identify_miscellaneous_details()
+    # Update discord channel
+    if discord_url:
+        requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content='f'Video Code: **{torrent_info["video_codec"]}**  |  Audio Code: **{torrent_info["audio_codec"]}**')
 
 
-    # -------- Check for Dupes --------
-    if os.getenv('check_dupes') == 'true':
-        console.print(f"\nChecking for dupes on [bold]{tracker}[/bold]...", style="chartreuse1")
-        # Call the function that will search each site for dupes and return a similarity percentage, if it exceeds what the user sets in config.env we skip the upload
-        dupe_response = search_for_dupes_api(acronym_to_tracker[str(tracker).lower()], torrent_info["imdb"], torrent_info=torrent_info, tracker_api=temp_tracker_api_key)
-        if type(dupe_response) is dict:
-            if dupe_response is not None:
-                dupe_that_exists_title = str(list(dupe_response.keys())[0])
-                dupe_that_exists_percentage = str(list(dupe_response.values())[0])
+    # -------- Get TMDB & IMDB ID --------
+    # If the TMDB/IMDB was not supplied then we need to search TMDB for it using the title & year
+    for media_id_key, media_id_val in {"tmdb": args.tmdb, "imdb": args.imdb}.items():
+        if media_id_val is not None and len(
+                media_id_val[0]) > 1:  # we include ' > 1 ' to prevent blank ID's and issues later
+            torrent_info[media_id_key] = media_id_val[0]
 
-                logging.error(f"Could not upload to: {tracker} since we found a dupe on site already")
-                console.print(
-                    f"[red][bold]{dupe_that_exists_title}[/bold][/red] has a similarity percentage of [red][bold]{dupe_that_exists_percentage}%[/bold][/red] (your limit in config.env is [red][bold]{os.getenv('acceptable_similarity_percentage')}%[/bold][/red])",
-                    style="blue", highlight=False)
-                console.print(" :warning: Dupe Check Failed :warning: ", style="bold red on white")
-                # Update discord channel
-                if discord_url:
-                    requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content='f'Dupe check failed: **{dupe_that_exists_title}** is a dupe')
-                continue
-        else:
-            console.print(f":heavy_check_mark: Yay! No dupes found on [bold]{tracker}[/bold], continuing the upload process now\n")
+    if all(x in torrent_info for x in ['imdb', 'tmdb']):
+        # This means both the TMDB & IMDB ID are already in the torrent_info dict
+        logging.info("Both TMDB & IMDB ID have been supplied by the user, so no need to make any TMDB API request")
+    elif any(x in torrent_info for x in ['imdb', 'tmdb']):
+        # This means we can skip the search via title/year and instead use whichever ID to get the other (tmdb -> imdb and vice versa)
+        missing_id_key = 'tmdb' if 'imdb' in torrent_info else 'imdb'
+        existing_id_key = 'tmdb' if 'tmdb' in torrent_info else 'imdb'
+        logging.info(f"We are missing '{missing_id_key}' starting TMDB API request now")
+        # Now we call the function that will use the TMDB API to get whichever ID we are missing
+        torrent_info[missing_id_key] = get_external_id(id_site=existing_id_key, id_value=torrent_info[existing_id_key],
+                                                       content_type=torrent_info["type"])
+    else:
+        logging.info("We are missing both the 'TMDB' & 'IMDB' ID, trying to identify it via title & year")
+        search_tmdb_for_id(query_title=torrent_info["title"], year=torrent_info["year"] if "year" in torrent_info else "",
+                           content_type=torrent_info["type"])
+    # Update discord channel
+    if discord_url:
+        requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content='f'IMDB: **{torrent_info["imdb"]}**  |  TMDB: **{torrent_info["tmdb"]}**')
 
-    # -------- Generate .torrent file --------
-    console.print(f'\n[bold]Generating .torrent file for [chartreuse1]{tracker}[/chartreuse1][/bold]')
 
-    generate_dot_torrent(
-        file=torrent_info["upload_media"],
-        announce=list(os.getenv(f"{str(tracker).upper()}_ANNOUNCE_URL").split(" ")),
-        source=tracker,
-        callback=generate_callback
-    )
+    # -------- Use official info from TMDB --------
+    compare_tmdb_data_local(torrent_info["type"])
 
-    # -------- Assign specific tracker keys --------
-    choose_right_tracker_keys()  # This function takes the info we have the dict torrent_info and associates with the right key/values needed for us to use X trackers API
+    # -------- Format torrent title --------
+    # Support for user adding in custom edition if its not obvious from filename
+    if args.edition:
+        logging.info(f"the user supplied the following edition: {' '.join(args.edition)}")
+        console.print(f"\nUsing the user supplied edition: [medium_spring_green]{' '.join(args.edition)}[/medium_spring_green]")
+        torrent_info["edition"] = ' '.join(args.edition)
+    # Now actually format the title
+    format_title()
 
-    # -------- Upload everything! --------
-    # 1.0 everything we do in this for loop isn't persistent, its specific to each site that you upload to
-    # 1.1 things like screenshots, TMDB/IMDB ID's can & are reused for each site you upload to
-    # 2.0 we take all the info we generated outside of this loop (mediainfo, description, etc) and combine it with tracker specific info and upload it all now
-    upload_to_site(upload_to=tracker, tracker_api_key=temp_tracker_api_key)
 
-    # Tracker Settings
-    tracker_settings_table = Table(show_header=True, header_style="bold cyan")
-    tracker_settings_table.add_column("Key", justify="left")
-    tracker_settings_table.add_column("Value", justify="left")
+    # -------- Take / Upload Screenshots --------
 
-    for tracker_settings_key, tracker_settings_value in sorted(tracker_settings.items()):
-        # Add torrent_info data to each row
-        tracker_settings_table.add_row(
-            "[purple][bold]{}[/bold][/purple]".format(tracker_settings_key),
-            tracker_settings_value,
-        )
-    console.print(tracker_settings_table)
+    media_info_duration = MediaInfo.parse(torrent_info["raw_video_file"] if "raw_video_file" in torrent_info else torrent_info["upload_media"]).tracks[1]
+    torrent_info["duration"] = str(media_info_duration.duration).split(".", 1)[0]  # This is used to evenly space out timestamps for screenshots
+    # Call function to actually take screenshots & upload them (different file)
+    console.print(take_upload_screens(duration=torrent_info["duration"],
+                                      upload_media_import=torrent_info["raw_video_file"] if "raw_video_file" in torrent_info else torrent_info["upload_media"],
+                                      torrent_title_import=torrent_info["torrent_title"],
+                                      base_path=working_folder,
+                                      discord_url=discord_url
+                                      ))
+    if os.path.exists(f'{working_folder}/temp_upload/bbcode_images.txt'):
+        torrent_info["bbcode_images"] = f'{working_folder}/temp_upload/bbcode_images.txt'
 
-# -------- Post Processing --------
-# After we upload the media we can move the .torrent & media files to a place the user specifies
-# This isn't tracker specific so its outside of that ^^ 'for loop'
 
-move_locations = {"torrent": f"{os.getenv('dot_torrent_move_location')}", "media": f"{os.getenv('media_move_location')}"}
+    # At this point the only stuff that remains to be done is site specific so we can start a loop here for each site we are uploading to
+    logging.info("Now starting tracker specific tasks")
+    for tracker in upload_to_trackers:
+        temp_tracker_api_key = api_keys_dict[f"{str(tracker).lower()}_api_key"]
+        logging.info(f"Trying to upload to: {tracker}")
 
-for move_location_key, move_location_value in move_locations.items():
-    # If the user supplied a path & it exists we proceed
-    if len(move_location_value) != 0 and os.path.exists(move_location_value):
-        logging.info(f"The path {move_location_value} exists")
+        # Update discord channel
+        if discord_url:
+            requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content=Uploading to: **{config["name"]}**')
 
-        if move_location_key == 'torrent':
-            # The user might have upload to a few sites so we need to move all files that end with .torrent to the new location
-            list_dot_torrent_files = glob.glob(f"{working_folder}/temp_upload/*.torrent")
-            for dot_torrent_file in list_dot_torrent_files:
-                # Move each .torrent file we find into the directory the user specified
-                shutil.copy(dot_torrent_file, move_locations["torrent"])
+        # Create a new dictionary that we store the exact keys/vals that the site is expecting
+        tracker_settings = {}
+        tracker_settings.clear()
 
-        # Media files are moved instead of copied so we need to make sure they don't already exist in the path the user provides
-        if move_location_key == 'media':
-            if str(f"{Path(torrent_info['upload_media']).parent}/") == move_location_value:
-                console.print(f'\nError, {torrent_info["upload_media"]} is already in the move location you specified: "{move_location_value}"\n', style="red", highlight=False)
-                logging.error(f"{torrent_info['upload_media']} is already in {move_location_value}, Not moving the media")
+        # Open the correct .json file since we now need things like announce URL, API Keys, and API info
+        with open("{}/site_templates/".format(working_folder) + str(acronym_to_tracker.get(str(tracker).lower())) + ".json", "r", encoding="utf-8") as config_file:
+            config = json.load(config_file)
+
+
+        # -------- Fill in description.txt --------
+        if "bbcode_images" in torrent_info:
+            # (Theory) BHD has a different bbcode parser then BLU/ACM so the line break is different for each site
+            #   this is why we set it in each sites *.json file then retrieve it here in this 'for loop' since its different for each site
+            bbcode_line_break = config['bbcode_line_break']
+            heart = config['luv_uu']
+
+            # If the user is uploading to multiple sites we don't want to keep appending to the same description.txt file so remove it each time and write clean bbcode to it
+            #  (Note, this doesn't delete bbcode_images.txt so you aren't uploading the same images multiple times)
+            if os.path.isfile(f'{working_folder}/temp_upload/description.txt'):
+                os.remove(f'{working_folder}/temp_upload/description.txt')
+
+            # Now open up the correct files and format all the bbcode/tags below
+            with open(torrent_info["bbcode_images"], 'r') as bbcode, open(f'{working_folder}/temp_upload/description.txt', 'a') as description:
+                # First add the [center] tags, "Screenshots" header, Size tags etc etc. This only needs to be written once which is why its outside of the 'for loop' below
+                description.write(f'{bbcode_line_break}[center] ---------------------- [size=22]Screenshots[/size] ---------------------- {bbcode_line_break}{bbcode_line_break}')
+
+                # Now write in the actual screenshot bbcode
+                for line in bbcode:
+                    description.write(line)
+
+                # Finally append the entire thing with some shameless self promotion ;) & and the closing [/center] tags and some line breaks
+                description.write(f' {bbcode_line_break}{bbcode_line_break} Uploaded with{heart}using [url=https://github.com/ryelogheat/xpbot]XpBot[/url][/center]')
+
+            # Add the finished file to the 'torrent_info' dict
+            torrent_info["description"] = f'{working_folder}/temp_upload/description.txt'
+
+
+        # -------- Check for Dupes --------
+        if os.getenv('check_dupes') == 'true':
+            console.print(f"\nChecking for dupes on [bold]{tracker}[/bold]...", style="chartreuse1")
+            # Call the function that will search each site for dupes and return a similarity percentage, if it exceeds what the user sets in config.env we skip the upload
+            dupe_response = search_for_dupes_api(acronym_to_tracker[str(tracker).lower()], torrent_info["imdb"], torrent_info=torrent_info, tracker_api=temp_tracker_api_key)
+            if type(dupe_response) is dict:
+                if dupe_response is not None:
+                    dupe_that_exists_title = str(list(dupe_response.keys())[0])
+                    dupe_that_exists_percentage = str(list(dupe_response.values())[0])
+
+                    logging.error(f"Could not upload to: {tracker} since we found a dupe on site already")
+                    console.print(
+                        f"[red][bold]{dupe_that_exists_title}[/bold][/red] has a similarity percentage of [red][bold]{dupe_that_exists_percentage}%[/bold][/red] (your limit in config.env is [red][bold]{os.getenv('acceptable_similarity_percentage')}%[/bold][/red])",
+                        style="blue", highlight=False)
+                    console.print(" :warning: Dupe Check Failed :warning: ", style="bold red on white")
+                    # Update discord channel
+                    if discord_url:
+                        requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content='f'Dupe check failed: **{dupe_that_exists_title}** is a dupe')
+                    continue
             else:
-                logging.info(f"Moved {torrent_info['upload_media']} to {move_location_value}")
-                shutil.move(torrent_info["upload_media"], move_location_value)
+                console.print(f":heavy_check_mark: Yay! No dupes found on [bold]{tracker}[/bold], continuing the upload process now\n")
 
-            # Torrent Info
-torrent_info_table = Table(show_header=True, header_style="bold cyan")
-torrent_info_table.add_column("Key", justify="left")
-torrent_info_table.add_column("Value", justify="left")
+        # -------- Generate .torrent file --------
+        console.print(f'\n[bold]Generating .torrent file for [chartreuse1]{tracker}[/chartreuse1][/bold]')
 
-for torrent_info_key, torrent_info_value in sorted(torrent_info.items()):
-    # Add torrent_info data to each row
-    torrent_info_table.add_row(
-        "[purple][bold]{}[/bold][/purple]".format(torrent_info_key),
-        torrent_info_value,
-    )
-console.print(torrent_info_table)
+        generate_dot_torrent(
+            file=torrent_info["upload_media"],
+            announce=list(os.getenv(f"{str(tracker).upper()}_ANNOUNCE_URL").split(" ")),
+            source=tracker,
+            callback=generate_callback
+        )
 
-script_end_time = time.perf_counter()
-total_run_time = f'{script_end_time - script_start_time:0.4f}'
-logging.info(f"Total runtime is {total_run_time} seconds")
-# Update discord channel
-if discord_url:
-    requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content='f'Total runtime: **{total_run_time} seconds**')
+        # -------- Assign specific tracker keys --------
+        choose_right_tracker_keys()  # This function takes the info we have the dict torrent_info and associates with the right key/values needed for us to use X trackers API
+
+        # -------- Upload everything! --------
+        # 1.0 everything we do in this for loop isn't persistent, its specific to each site that you upload to
+        # 1.1 things like screenshots, TMDB/IMDB ID's can & are reused for each site you upload to
+        # 2.0 we take all the info we generated outside of this loop (mediainfo, description, etc) and combine it with tracker specific info and upload it all now
+        upload_to_site(upload_to=tracker, tracker_api_key=temp_tracker_api_key)
+
+        # Tracker Settings
+        tracker_settings_table = Table(show_header=True, header_style="bold cyan")
+        tracker_settings_table.add_column("Key", justify="left")
+        tracker_settings_table.add_column("Value", justify="left")
+
+        for tracker_settings_key, tracker_settings_value in sorted(tracker_settings.items()):
+            # Add torrent_info data to each row
+            tracker_settings_table.add_row(
+                "[purple][bold]{}[/bold][/purple]".format(tracker_settings_key),
+                tracker_settings_value,
+            )
+        console.print(tracker_settings_table)
+
+    # -------- Post Processing --------
+    # After we upload the media we can move the .torrent & media files to a place the user specifies
+    # This isn't tracker specific so its outside of that ^^ 'for loop'
+
+    move_locations = {"torrent": f"{os.getenv('dot_torrent_move_location')}", "media": f"{os.getenv('media_move_location')}"}
+
+    for move_location_key, move_location_value in move_locations.items():
+        # If the user supplied a path & it exists we proceed
+        if len(move_location_value) != 0 and os.path.exists(move_location_value):
+            logging.info(f"The path {move_location_value} exists")
+
+            if move_location_key == 'torrent':
+                # The user might have upload to a few sites so we need to move all files that end with .torrent to the new location
+                list_dot_torrent_files = glob.glob(f"{working_folder}/temp_upload/*.torrent")
+                for dot_torrent_file in list_dot_torrent_files:
+                    # Move each .torrent file we find into the directory the user specified
+                    shutil.copy(dot_torrent_file, move_locations["torrent"])
+
+            # Media files are moved instead of copied so we need to make sure they don't already exist in the path the user provides
+            if move_location_key == 'media':
+                if str(f"{Path(torrent_info['upload_media']).parent}/") == move_location_value:
+                    console.print(f'\nError, {torrent_info["upload_media"]} is already in the move location you specified: "{move_location_value}"\n', style="red", highlight=False)
+                    logging.error(f"{torrent_info['upload_media']} is already in {move_location_value}, Not moving the media")
+                else:
+                    logging.info(f"Moved {torrent_info['upload_media']} to {move_location_value}")
+                    shutil.move(torrent_info["upload_media"], move_location_value)
+
+                # Torrent Info
+    torrent_info_table = Table(show_header=True, header_style="bold cyan")
+    torrent_info_table.add_column("Key", justify="left")
+    torrent_info_table.add_column("Value", justify="left")
+
+    for torrent_info_key, torrent_info_value in sorted(torrent_info.items()):
+        # Add torrent_info data to each row
+        torrent_info_table.add_row(
+            "[purple][bold]{}[/bold][/purple]".format(torrent_info_key),
+            torrent_info_value,
+        )
+    console.print(torrent_info_table)
+
+    script_end_time = time.perf_counter()
+    total_run_time = f'{script_end_time - script_start_time:0.4f}'
+    logging.info(f"Total runtime is {total_run_time} seconds")
+    # Update discord channel
+    if discord_url:
+        requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content='f'Total runtime: **{total_run_time} seconds**')
