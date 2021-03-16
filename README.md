@@ -1,4 +1,4 @@
-# UNIT3D_auto_upload
+# UNIT3D auto upload
 Automatically parse, rename, and upload torrents to trackers using the UNIT3D codebase
 ### Supported sites:
 * BHD - [**Beyond-HD**](https://beyond-hd.me)
