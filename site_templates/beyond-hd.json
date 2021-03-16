@@ -5,7 +5,6 @@
   "torrents_search": "https://beyond-hd.me/api/torrents/{api_key}",
   "source": "bhd",
   "bbcode_line_break": "[br][/br]",
-  "luv_uu": " [color=red]<3[/color] ",
 
 
   "translation": {
@@ -258,7 +257,7 @@
     "720p_encode": 1,
     "else": 1
   },
-  
+
   "torrent_title_format": {
     "episode": {
       "bluray_disc": "{title} {year} {s00e00} {screen_size} {region} {source} {hdr} {dv} {video_codec} {audio_codec} {atmos} {audio_channels} {release_group}",

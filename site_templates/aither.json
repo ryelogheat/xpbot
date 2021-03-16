@@ -5,7 +5,7 @@
   "torrents_search": "https://aither.cc/api/torrents/filter?api_token={api_key}",
   "source": "Aither",
   "bbcode_line_break": "<br />",
-  "luv_uu": " ❤ ",
+
 
   "translation": {
     "dot_torrent": "torrent",
