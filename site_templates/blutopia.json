@@ -7,7 +7,6 @@
   "bbcode_line_break": "<br />",
   "luv_uu": " ❤ ",
 
-
   "translation": {
     "dot_torrent": "torrent",
     "torrent_title" : "name",
@@ -132,8 +131,6 @@
       "torrent_details": "attributes"
     },
 
-
-
     "different_cuts": "1",
     "2160p_remux": 1,
     "2160p_encode": 1,
@@ -142,6 +139,29 @@
     "720p_encode": 100,
     "else": 1
   },
+
+  "torrent_title_format": {
+    "episode": {
+      "bluray_disc": "{title} {year} {season_or_episode} {repack} {resolution} {region} {uhd} {hybrid} {source} {remux} {web_source} {web_type} {hdr} {dv} {video_codec} {audio_codec} {atmos} {audio_channels} {group}",
+      "bluray_remux": "{title} {year} {season_or_episode} {repack} {resolution} {region} {uhd} {hybrid} {source} {remux} {web_source} {web_type} {hdr} {dv} {video_codec} {audio_codec} {audio_channels} {atmos} {group}",
+      "bluray_encode": "{title} {year} {season_or_episode} {repack} {resolution} {region} {uhd} {hybrid} {source} {remux} {web_source} {web_type} {audio_codec} {atmos} {audio_channels} {hdr} {dv} {video_codec} {group}",
+      "web": "{title} {year} {season_or_episode} {repack} {resolution} {region} {uhd} {hybrid} {source} {remux} {web_source} {web_type} {audio_codec} {atmos} {audio_channels} {hdr} {dv} {video_codec} {group}",
+      "hdtv": "{title} {year} {season_or_episode} {repack} {resolution} {region} {uhd} {hybrid} {source} {remux} {web_source} {web_type} {audio_codec} {atmos} {audio_channels} {hdr} {dv} {video_codec} {group}",
+      "dvd_disc": "{title} {year} {season_or_episode} {repack} {resolution} {region} {uhd} {hybrid} {source} {remux} {web_source} {web_type} {hdr} {dv} {video_codec} {audio_codec} {atmos} {audio_channels} {group}",
+      "dvd_remux": "{title} {year} {season_or_episode} {repack} {resolution} {region} {uhd} {hybrid} {source} {web_source} {web_type} {hdr} {dv} {video_codec} {remux} {audio_codec} {atmos} {audio_channels} {group}"
+    },
+
+    "movie": {
+      "bluray_disc": "{title} {year} {edition} {repack} {resolution} {region} {uhd} {hybrid} {source} {remux} {web_source} {web_type} {hdr} {dv} {video_codec} {audio_codec} {atmos} {audio_channels} {group}",
+      "bluray_remux": "{title} {year} {edition} {repack} {resolution} {region} {uhd} {hybrid} {source} {remux} {web_source} {web_type} {hdr} {dv} {video_codec} {audio_codec} {atmos} {audio_channels} {group}",
+      "bluray_encode": "{title} {year} {edition} {repack} {resolution} {region} {uhd} {hybrid} {source} {remux} {web_source} {web_type} {audio_codec} {atmos} {audio_channels} {hdr} {dv} {video_codec} {group}",
+      "web": "{title} {year} {edition} {repack} {resolution} {region} {uhd} {hybrid} {source} {remux} {web_source} {web_type} {audio_codec} {atmos} {audio_channels} {hdr} {dv} {video_codec} {group}",
+      "hdtv": "{title} {year} {edition} {repack} {resolution} {region} {uhd} {hybrid} {source} {remux} {web_source} {web_type} {audio_codec} {atmos} {audio_channels} {hdr} {dv} {video_codec} {group}",
+      "dvd_disc": "{title} {year} {edition} {repack} {resolution} {region} {uhd} {hybrid} {source} {remux} {web_source} {web_type} {hdr} {dv} {video_codec} {audio_codec} {atmos} {audio_channels} {group}",
+      "dvd_remux": "{title} {year} {edition} {repack} {resolution} {region} {uhd} {hybrid} {source} {remux} {web_source} {web_type} {hdr} {dv} {video_codec} {audio_codec} {atmos} {audio_channels} {group}"
+    }
+  },
+
 
   "banned_groups": [
     "AROMA",

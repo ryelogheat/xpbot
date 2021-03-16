@@ -1031,6 +1031,10 @@ def search_for_mal_id(content_type, tmdb_id):
     content_type_to_value_dict = {'movie': 'tmdb', 'tv': 'tvdb'}
 
     # Now we we get the MAL ID
+
+    # Before you get too concerned this address is a flask app I quickly set up to convert TMDB/IMDB IDs to mal using this project/collection https://github.com/Fribb/anime-lists
+    # You can test it out yourself with the url: http://195.201.146.92:5000/api/?tmdb=10515 to see what it returns (it literally just returns the number "513" which is the corresponding MAL ID)
+    # I might just start include the "tmdb --> mal .json" map with this bot instead of selfhosting it as an api, but for now it works so I'll revisit the subject later
     tmdb_tvdb_id_to_mal = f"http://195.201.146.92:5000/api/?{content_type_to_value_dict[content_type]}={torrent_info[content_type_to_value_dict[content_type]]}"
     mal_id_response = requests.get(tmdb_tvdb_id_to_mal)
 
@@ -1078,11 +1082,16 @@ def compare_tmdb_data_local(content_type):
         torrent_info["year"] = get_media_info["release_date"][:4]
 
 
-def format_title():
+def format_title(json_config):
     # Some things are pretty much universally followed and we can rename certain values here before we set the final torrent name
 
     # If the user is uploading a full bluray disc we want to type bluray with a dash in between blu & ray (Blu-ray)
     # For all other bluray content (remux or encode) we use the full word "Bluray"
+
+
+    tracker_torrent_name_style_config = torrent_info["source_type"] if str(torrent_info["source"]).lower() != "web" else "web"
+    tracker_torrent_name_style = json_config['torrent_title_format'][torrent_info["type"]][tracker_torrent_name_style_config]
+
 
     if "bluray" in torrent_info["source_type"]:
         if "disc" in torrent_info["source_type"]:
@@ -1090,11 +1099,13 @@ def format_title():
         else:
             torrent_info["source"] = "Bluray"
 
+
     if str(torrent_info["source"]).lower() == "web":
         if torrent_info["source_type"] == "webrip":
             torrent_info["web_type"] = "WEBRip"
         else:
             torrent_info["web_type"] = "WEB-DL"
+
 
     if str(torrent_info["source"]).lower() == "dvd":
         # if torrent_info["source_type"] == "dvd_remux" or torrent_info["source_type"] == "dvd_disc":
@@ -1105,52 +1116,51 @@ def format_title():
 
 
     if torrent_info["type"] == "movie":
-        title_template = (
-            "{title} {year} {edition} {repack} {resolution} {region} {uhd} {hybrid} {source} {remux} {web_source} {web_type} {hdr} {dv} {video_codec} {audio_codec} {Atmos} {audio_channels} {group}".format(
-                title=torrent_info["title"],
-                year=torrent_info["year"] if "year" in torrent_info else "",
-                edition=torrent_info["edition"] if "edition" in torrent_info else "",
-                repack=torrent_info["repack"] if "repack" in torrent_info else "",
-                source=torrent_info["source"] if "source" in torrent_info and "web_type" not in torrent_info else "",
-                resolution=torrent_info["screen_size"],
-                region=torrent_info["region"] if "region" in torrent_info else "",
-                uhd=torrent_info["uhd"] if "uhd" in torrent_info else "",
-                web_source=torrent_info["web_source"] if "web_source" in torrent_info else "",
-                web_type=torrent_info["web_type"] if "web_type" in torrent_info else "",
-                audio_codec=torrent_info["audio_codec"],
-                Atmos=torrent_info["atmos"] if "atmos" in torrent_info else "",
-                hdr=torrent_info["hdr"] if "hdr" in torrent_info else "",
-                audio_channels=torrent_info["audio_channels"],
-                dv=torrent_info["dv"] if "dv" in torrent_info else "",
-                video_codec=torrent_info["video_codec"],
-                hybrid=torrent_info["hybrid"] if "hybrid" in torrent_info else "",
-                remux=str(torrent_info["remux"]).upper() if "remux" in torrent_info else "",
-                group=f'-{torrent_info["release_group"]}' if "release_group" in torrent_info else "")
-        )
+        title_template = (tracker_torrent_name_style.format(
+            title=torrent_info["title"],
+            year=torrent_info["year"] if "year" in torrent_info else "",
+            edition=torrent_info["edition"] if "edition" in torrent_info else "",
+            repack=torrent_info["repack"] if "repack" in torrent_info else "",
+            source=torrent_info["source"] if "source" in torrent_info and "web_type" not in torrent_info else "",
+            resolution=torrent_info["screen_size"],
+            region=torrent_info["region"] if "region" in torrent_info else "",
+            uhd=torrent_info["uhd"] if "uhd" in torrent_info else "",
+            web_source=torrent_info["web_source"] if "web_source" in torrent_info else "",
+            web_type=torrent_info["web_type"] if "web_type" in torrent_info else "",
+            audio_codec=torrent_info["audio_codec"],
+            atmos=torrent_info["atmos"] if "atmos" in torrent_info else "",
+            hdr=torrent_info["hdr"] if "hdr" in torrent_info else "",
+            audio_channels=torrent_info["audio_channels"],
+            dv=torrent_info["dv"] if "dv" in torrent_info else "",
+            video_codec=torrent_info["video_codec"],
+            hybrid=torrent_info["hybrid"] if "hybrid" in torrent_info else "",
+            remux=str(torrent_info["remux"]).upper() if "remux" in torrent_info else "",
+            group=f'-{torrent_info["release_group"]}' if "release_group" in torrent_info else "")
+            )
     else:
         # tv
-        title_template = (
-            "{title} {year} {season_or_episode} {repack} {resolution} {region} {uhd} {hybrid} {source} {remux} {web_source} {web_type} {hdr} {dv} {video_codec} {audio_codec} {Atmos} {audio_channels} {group}".format(
-                title=torrent_info["title"],
-                year=torrent_info["year"] if "year" in torrent_info else "",
-                season_or_episode=torrent_info["s00e00"],
-                repack=torrent_info["repack"] if "repack" in torrent_info else "",
-                resolution=torrent_info["screen_size"],
-                region=torrent_info["region"] if "region" in torrent_info else "",
-                uhd=torrent_info["uhd"] if "uhd" in torrent_info else "",
-                source=torrent_info["source"] if "source" in torrent_info and "web_type" not in torrent_info else "",
-                web_source=torrent_info["web_source"] if "web_source" in torrent_info else "",
-                web_type=torrent_info["web_type"] if "web_type" in torrent_info else "",
-                audio_codec=torrent_info["audio_codec"],
-                Atmos=torrent_info["atmos"] if "atmos" in torrent_info else "",
-                hdr=torrent_info["hdr"] if "hdr" in torrent_info else "",
-                audio_channels=torrent_info["audio_channels"],
-                dv=torrent_info["dv"] if "dv" in torrent_info else "",
-                video_codec=torrent_info["video_codec"],
-                hybrid=torrent_info["hybrid"] if "hybrid" in torrent_info else "",
-                remux=str(torrent_info["remux"]).upper() if "remux" in torrent_info else "",
-                group=f'-{torrent_info["release_group"]}' if "release_group" in torrent_info else "")
-        )
+        title_template = (tracker_torrent_name_style.format(
+            title=torrent_info["title"],
+            year=torrent_info["year"] if "year" in torrent_info else "",
+            season_or_episode=torrent_info["s00e00"],
+            repack=torrent_info["repack"] if "repack" in torrent_info else "",
+            resolution=torrent_info["screen_size"],
+            region=torrent_info["region"] if "region" in torrent_info else "",
+            uhd=torrent_info["uhd"] if "uhd" in torrent_info else "",
+            source=torrent_info["source"] if "source" in torrent_info and "web_type" not in torrent_info else "",
+            web_source=torrent_info["web_source"] if "web_source" in torrent_info else "",
+            web_type=torrent_info["web_type"] if "web_type" in torrent_info else "",
+            audio_codec=torrent_info["audio_codec"],
+            atmos=torrent_info["atmos"] if "atmos" in torrent_info else "",
+            hdr=torrent_info["hdr"] if "hdr" in torrent_info else "",
+            audio_channels=torrent_info["audio_channels"],
+            dv=torrent_info["dv"] if "dv" in torrent_info else "",
+            video_codec=torrent_info["video_codec"],
+            hybrid=torrent_info["hybrid"] if "hybrid" in torrent_info else "",
+            remux=str(torrent_info["remux"]).upper() if "remux" in torrent_info else "",
+            group=f'-{torrent_info["release_group"]}' if "release_group" in torrent_info else "")
+            )
+
 
     torrent_info["torrent_title"] = ' '.join(title_template.split()).replace(" -", "-")
     # Update discord channel
@@ -1674,14 +1684,13 @@ for file in upload_queue:
     # -------- Use official info from TMDB --------
     compare_tmdb_data_local(torrent_info["type"])
 
-    # -------- Format torrent title --------
+
+    # -------- User input edition --------
     # Support for user adding in custom edition if its not obvious from filename
     if args.edition:
         logging.info(f"the user supplied the following edition: {' '.join(args.edition)}")
         console.print(f"\nUsing the user supplied edition: [medium_spring_green]{' '.join(args.edition)}[/medium_spring_green]")
         torrent_info["edition"] = ' '.join(args.edition)
-    # Now actually format the title
-    format_title()
 
 
     # -------- Take / Upload Screenshots --------
@@ -1691,7 +1700,7 @@ for file in upload_queue:
     # Call function to actually take screenshots & upload them (different file)
     console.print(take_upload_screens(duration=torrent_info["duration"],
                                       upload_media_import=torrent_info["raw_video_file"] if "raw_video_file" in torrent_info else torrent_info["upload_media"],
-                                      torrent_title_import=torrent_info["torrent_title"],
+                                      torrent_title_import=torrent_info["title"],
                                       base_path=working_folder,
                                       discord_url=discord_url
                                       ))
@@ -1716,6 +1725,10 @@ for file in upload_queue:
         # Open the correct .json file since we now need things like announce URL, API Keys, and API info
         with open("{}/site_templates/".format(working_folder) + str(acronym_to_tracker.get(str(tracker).lower())) + ".json", "r", encoding="utf-8") as config_file:
             config = json.load(config_file)
+
+
+        # -------- format the torrent title --------
+        format_title(config)
 
 
         # -------- Fill in description.txt --------
