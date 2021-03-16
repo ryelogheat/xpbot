@@ -1257,7 +1257,6 @@ def choose_right_tracker_keys():
                 if sub_val == 1:
                     total_num_of_required_keys += 1
                     # Now check if the sub_key is in the relevant_torrent_info_values list
-                    print(sub_key)
                     if sub_key in str(relevant_torrent_info_values).lower():
                         print("SUBKEY IN relevant_torrent_info_values")
                         total_num_of_acquired_keys += 1
