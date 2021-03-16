@@ -46,6 +46,45 @@
 
 
     "type": {
+
+      "UHD 100": {
+        "bluray_disc": 1,
+        "2160p": 1,
+        "uhd_100": 1
+      },
+
+      "UHD 66": {
+        "bluray_disc": 1,
+        "2160p": 1,
+        "uhd_66": 1
+      },
+
+
+      "UHD 50": {
+        "bluray_disc": 1,
+        "2160p": 1,
+        "uhd_50": 1
+      },
+
+
+      "BD 50": {
+        "bluray_disc": 1,
+        "bd_50": 1,
+        "1080p": 2,
+        "1080i": 2
+
+      },
+
+
+      "BD 25": {
+        "bluray_disc": 1,
+        "bd_25": 1,
+        "1080p": 2,
+        "1080i": 2
+      },
+
+
+
       "UHD Remux": {
         "bluray_remux": 1,
         "2160p": 1
