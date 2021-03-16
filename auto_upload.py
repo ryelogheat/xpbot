@@ -89,6 +89,8 @@ if len(os.getenv('DISCORD_WEBHOOK')) != 0:
 else:
     discord_url = None
 
+bdinfo_script = os.getenv('bdinfo_script')
+
 
 # Setup args
 parser = argparse.ArgumentParser()
@@ -98,7 +100,7 @@ parser.add_argument('-t', '--trackers', nargs='*', required=True, help="Tracker(
 parser.add_argument('-anon', action='store_true', help="if you want your upload to be anonymous (no other info needed, just input '-anon'")
 parser.add_argument('-path', nargs=1, help="Use this to provide path to file/folder")
 parser.add_argument('-e', '--edition', nargs='*', help="Manually provide an 'edition' (e.g. Criterion Collection, Extended, Remastered, etc)")
-parser.add_argument('-d', '--description', action='store_true', help="Use this to edit 'description.txt', you'll be prompted later to paste your own bbcode/messages")
+parser.add_argument('-disc', action='store_true', help="If you are uploading a raw dvd/bluray disc you need to pass this arg")
 args = parser.parse_args()
 
 
@@ -150,7 +152,6 @@ def identify_type_and_basic_info(full_path):
     for wanted_key in keys_we_want_torrent_info:
         if wanted_key in guessit(full_path):
             torrent_info[wanted_key] = str(guessit(full_path)[wanted_key])
-
     # ------------ Format Season & Episode (Goal is 'S01E01' type format) ------------ #
     # Depending on if this is a tv show or movie we have some other 'required' keys that we need (season/episode)
     if "type" not in torrent_info:
@@ -206,18 +207,63 @@ def identify_type_and_basic_info(full_path):
 
         # Some uploads are movies within a folder and those folders occasionally contain non-video files nfo, sub, srt, etc files
         # we need to make sure we select a video file to use for mediainfo later
-        for individual_file in sorted(glob.glob(f"{torrent_info['upload_media']}/*")):
-            found = False  # this is used to break out of the double nested loop
-            logging.info(f"Checking to see if {individual_file} is a video file")
-            file_info = MediaInfo.parse(individual_file)
-            for track in file_info.tracks:
-                if track.track_type == "Video":
-                    torrent_info["raw_video_file"] = individual_file
-                    logging.info(f"Using {individual_file} for mediainfo tests")
-                    found = True
+
+        # First check to see if we are uploading a 'raw bluray disc'
+        if args.disc:
+            # Verify that the bdinfo script exists
+            if not os.path.isfile(bdinfo_script):
+                logging.critical("You've specified the '-disc' arg but have not supplied a valid bdinfo script path in config.env")
+                logging.info("Can not upload a raw disc without bdinfo output, update the 'bdinfo_script' path in config.env")
+                raise AssertionError(f"The bdinfo script you specified: ({bdinfo_script}) does not exist")
+
+            # Now that we've "verified" bdinfo is on the system, we can analyze the folder and continue the upload
+
+            bd_max_size = 0
+            bd_max_file = ""
+            for folder, subfolders, files in os.walk(f'{torrent_info["upload_media"]}BDMV/STREAM/'):
+                # checking the size of each file
+                for file in files:
+                    size = os.stat(os.path.join(folder, file)).st_size
+                    # updating maximum size
+                    if size > bd_max_size:
+                        bd_max_size = size
+                        bd_max_file = os.path.join(folder, file)
+
+
+            torrent_info["raw_video_file"] = bd_max_file
+
+
+
+
+            bdinfo_output_split = str(' '.join(str(subprocess.check_output([bdinfo_script, torrent_info["upload_media"], "-l"])).split())).split(' ')
+            all_mpls_playlists = re.findall(r'\d\d\d\d\d\.MPLS', str(bdinfo_output_split))
+            # In auto_mode we just choose the largest playlist
+            # TODO add support for auto_mode/user input
+            dict_of_playlist_length_size = {}
+            # Still identifying the largest playlist here...
+            for index, mpls_playlist in enumerate(bdinfo_output_split):
+                if mpls_playlist in all_mpls_playlists:
+                    dict_of_playlist_length_size[mpls_playlist] = int(str(bdinfo_output_split[index + 2]).replace(",", ""))
+            largest_playlist_value = max(dict_of_playlist_length_size.values())
+            largest_playlist = list(dict_of_playlist_length_size.keys())[list(dict_of_playlist_length_size.values()).index(largest_playlist_value)]
+            # print(largest_playlist)
+            torrent_info["largest_playlist"] = largest_playlist
+
+
+        else:
+            for individual_file in sorted(glob.glob(f"{torrent_info['upload_media']}/*")):
+                found = False  # this is used to break out of the double nested loop
+                logging.info(f"Checking to see if {individual_file} is a video file")
+                file_info = MediaInfo.parse(individual_file)
+                for track in file_info.tracks:
+                    if track.track_type == "Video":
+                        torrent_info["raw_video_file"] = individual_file
+                        logging.info(f"Using {individual_file} for mediainfo tests")
+                        found = True
+                        break
+                if found:
                     break
-            if found:
-                break
+
 
         if 'raw_video_file' not in torrent_info:
             logging.critical(f"The folder {torrent_info['upload_media']} does not contain any video files")
@@ -238,6 +284,9 @@ def identify_type_and_basic_info(full_path):
     for codec in ['video_codec', 'audio_codec']:
         if codec not in keys_we_need_but_missing_torrent_info:
             keys_we_need_but_missing_torrent_info.append(codec)
+
+    # Also add the key 'mediainfo' to the list 'keys_we_need_but_missing_torrent_info' so we can extract that now while we are using pymediainfo/ffprobe/etc
+    keys_we_need_but_missing_torrent_info.append('mediainfo')
 
     # By default the code below will always execute since we are always going to extract our own video_codec
 
@@ -267,28 +316,61 @@ def analyze_video_file(missing_value):
 
     # In pretty much all cases "media_info.tracks[1]" is going to be the video track and media_info.tracks[2] will be the primary audio track
     media_info_video_track = media_info.tracks[1]
-    media_info_audio_track = media_info.tracks[2]
+    # I've encountered a media file without an audio track one time... this try/exception should handle any future situations like that
+    try:
+        media_info_audio_track = media_info.tracks[2]
+    except IndexError:
+        media_info_audio_track = None
 
 
     # ------------ Save mediainfo to txt ------------ #
-    if "mediainfo" not in torrent_info:
+    if missing_value == "mediainfo":
         logging.info("Generating mediainfo.txt")
-        # We'll remove the full file path for privacy reasons and only show the file (or folder + file) path in the "Complete name" of media_info_output
-        if 'raw_video_file' in torrent_info:
-            essential_path = f"{torrent_info['raw_file_name']}/{os.path.basename(torrent_info['raw_video_file'])}"
+
+
+        # If its not a bluray disc we can get mediainfo, otherwise we need BDInfo
+        if "largest_playlist" not in torrent_info:
+            # We'll remove the full file path for privacy reasons and only show the file (or folder + file) path in the "Complete name" of media_info_output
+            if 'raw_video_file' in torrent_info:
+                essential_path = f"{torrent_info['raw_file_name']}/{os.path.basename(torrent_info['raw_video_file'])}"
+            else:
+                essential_path = f"{os.path.basename(torrent_info['upload_media'])}"
+            # depending on if the user is uploading a folder or file we need for format it correctly so we replace the entire path with just media file/folder name
+            logging.info(f"Using the following path in mediainfo.txt: {essential_path}")
+
+            media_info_output = str(MediaInfo.parse(parse_me, output="text", full=False)).replace(parse_me, essential_path)
+            save_location = str(working_folder + '/temp_upload/mediainfo.txt')
+            logging.info(f'Saving mediainfo to: {save_location}')
+
+            with open(save_location, 'w+') as f:
+                f.write(media_info_output)
+            # now save the mediainfo txt file location to the dict
+            # torrent_info["mediainfo"] = save_location
+            return save_location
+
+
         else:
-            essential_path = f"{os.path.basename(torrent_info['upload_media'])}"
-        # depending on if the user is uploading a folder or file we need for format it correctly so we replace the entire path with just media file/folder name
-        logging.info(f"Using the following path in mediainfo.txt: {essential_path}")
+            # Get the BDInfo, parse & save it all into a file called mediainfo.txt (filename doesn't really matter, it gets uploaded to the same place anyways)
+            bdinfo_output_split = str(' '.join(str(subprocess.check_output([bdinfo_script, torrent_info["upload_media"], "-l"])).split())).split(' ')
+            all_mpls_playlists = re.findall(r'\d\d\d\d\d\.MPLS', str(bdinfo_output_split))
 
-        media_info_output = str(MediaInfo.parse(parse_me, output="text", full=False)).replace(parse_me, essential_path)
-        save_location = str(working_folder + '/temp_upload/mediainfo.txt')
-        logging.info(f'Saving mediainfo to: {save_location}')
+            dict_of_playlist_length_size = {}
 
-        with open(save_location, 'w+') as f:
-            f.write(media_info_output)
-        # now save the mediainfo txt file location to the dict
-        torrent_info["mediainfo"] = save_location
+            for index, mpls_playlist in enumerate(bdinfo_output_split):
+                if mpls_playlist in all_mpls_playlists:
+                    dict_of_playlist_length_size[mpls_playlist] = int(str(bdinfo_output_split[index + 2]).replace(",", ""))
+
+            largest_playlist_value = max(dict_of_playlist_length_size.values())
+            largest_playlist = list(dict_of_playlist_length_size.keys())[list(dict_of_playlist_length_size.values()).index(largest_playlist_value)]
+
+            subprocess.run([bdinfo_script, torrent_info["upload_media"], "--mpls=" + largest_playlist])
+
+            shutil.move(f'{torrent_info["upload_media"]}BDINFO.{torrent_info["raw_file_name"]}.txt', f'{working_folder}/temp_upload/mediainfo.txt')
+            os.system(f"/usr/bin/sed -i '0,/<---- END FORUMS PASTE ---->/d' {working_folder}/temp_upload/mediainfo.txt")
+            # torrent_info["mediainfo"] = f'{working_folder}/temp_upload/mediainfo.txt'
+            return f'{working_folder}/temp_upload/mediainfo.txt'
+
+
 
 
     def quit_log_reason(reason):
@@ -472,14 +554,31 @@ def analyze_video_file(missing_value):
                 return audio_codec_dict[torrent_info["audio_codec"]]
 
 
+        # This regex is mainly for bluray_discs
+        # TODO rewrite this to be more inclusive of other audio codecs
+        bluray_disc_audio_codec_regex = re.search(r'(?P<TrueHD>TrueHD)|(?P<DTSHDMA>DTS-HD.MA)', torrent_info["raw_file_name"].replace(".", " "), re.IGNORECASE)
+        if bluray_disc_audio_codec_regex is not None:
+            for audio_codec in ["TrueHD", "DTSHDMA"]:
+                # Yeah I've kinda given up here, this is mainly to avoid mediainfo running on full bluray discs since TrueHD is really just AC3 which historically I assumed was Dolby Digital...
+                #  Don't really wanna deal with that ^^ so we try to match the 2 most popular Bluray Disc audio codecs (DTS-HD.MA & TrueHD) and move on
+                if bluray_disc_audio_codec_regex.group(audio_codec) is not None:
+                    if audio_codec == "DTSHDMA":
+                        audio_codec = "DTS-HD MA"
+                    logging.info(f'Used regex to identify the audio codec: {audio_codec}')
+                    return audio_codec
+
+
         # Now we try to identify the audio_codec using pymediainfo
-        if media_info_audio_track.codec is not None:
-            # On rare occasion *.codec is not available and we need to use *.format
-            audio_codec = media_info_audio_track.codec
-        # Only use *.format if *.codec is unavailable
-        elif media_info_audio_track.format is not None:
-            audio_codec = media_info_audio_track.format
-        # Set audio_codec equal to None if neither of those two ^^ exist and we'll move onto user input
+        if media_info_audio_track is not None:
+            if media_info_audio_track.codec is not None:
+                # On rare occasion *.codec is not available and we need to use *.format
+                audio_codec = media_info_audio_track.codec
+            # Only use *.format if *.codec is unavailable
+            elif media_info_audio_track.format is not None:
+                audio_codec = media_info_audio_track.format
+            # Set audio_codec equal to None if neither of those two ^^ exist and we'll move onto user input
+            else:
+                audio_codec = None
         else:
             audio_codec = None
 
@@ -1394,6 +1493,7 @@ def upload_to_site(upload_to, tracker_api_key):
         console.print("The status code isn't [green]200[/green] so something failed, upload may have failed")
         logging.error('status code is not 200, upload might have failed')
 
+
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------#
 #     This is the first code that executes when we run the script, we log that info and we start a timer so we can keep track of total script runtime      #
 # ---------------------------------------------------------------------------------------------------------------------------------------------------------#
@@ -1576,17 +1676,6 @@ console.print(take_upload_screens(duration=torrent_info["duration"],
 if os.path.exists(f'{working_folder}/temp_upload/bbcode_images.txt'):
     torrent_info["bbcode_images"] = f'{working_folder}/temp_upload/bbcode_images.txt'
 
-
-# -------- If '-d' arg passed, pause here and allow the user to edit description.txt --------
-if args.description and auto_mode == 'false':
-    # Multi line user input is tricky in Python and its my assumption most people that would use this would use it to enter something like an eac3to log or encode settings etc
-    # Its not practical to enter those 1 line at a time so instead we just pause the upload here, and give the user a chance to edit & add text to description.txt
-    console.print("\n\n[green1]You passed in the -description arg, You can now open & edit description.txt[/green1]\n"
-                  f"[blue]{torrent_info['description']}[/blue]\n")
-
-    ready_to_upload = Confirm.ask("Are you done editing description.txt & ready to continue uploading?")
-    if not ready_to_upload:
-        raise AssertionError
 
 # At this point the only stuff that remains to be done is site specific so we can start a loop here for each site we are uploading to
 logging.info("Now starting tracker specific tasks")
