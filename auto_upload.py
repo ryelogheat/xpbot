@@ -59,7 +59,7 @@ logging.basicConfig(filename='{}/upload_script.log'.format(working_folder),
 load_dotenv(f'{working_folder}/config.env')
 
 # Used to correctly select json file
-acronym_to_tracker = {"blu": "blutopia", "bhd": "beyond-hd", "r4e": "racing4everyone", "acm": "asiancinema"}
+acronym_to_tracker = {"blu": "blutopia", "bhd": "beyond-hd", "r4e": "racing4everyone", "acm": "asiancinema", "ath": "aither"}
 
 # Now assign some of the values we get from 'config.env' to global variables we use later
 api_keys_dict = {
@@ -67,6 +67,7 @@ api_keys_dict = {
     'blu_api_key': os.getenv('BLU_API_KEY'),
     'acm_api_key': os.getenv('ACM_API_KEY'),
     'r4e_api_key': os.getenv('R4E_API_KEY'),
+    'ath_api_key': os.getenv('ATH_API_Key'),
     'tmdb_api_key': os.getenv('TMDB_API_KEY')
 }
 # Make sure the TMDB API is provided
@@ -777,7 +778,7 @@ def identify_miscellaneous_details():
     # ------ WEB streaming service stuff here ------ #
     if torrent_info["source"] == "Web":
         # You can add more streaming platforms here, just append the sites 'tag' to the regex below (Case sensitive)
-        match_web_source = re.search(r'NF|AMZN|iT|ATVP|DSNP|HULU|VUDU|HMAX|iP|CBS|ESPN|STAN|STARZ|NBC', torrent_info["raw_file_name"])
+        match_web_source = re.search(r'NF|AMZN|iT|ATVP|DSNP|HULU|VUDU|HMAX|iP|CBS|ESPN|STAN|STARZ|NBC|PCOK', torrent_info["raw_file_name"])
         if match_web_source is not None:
             torrent_info["web_source"] = match_web_source.group()
             logging.info(f'Used Regex to extract the WEB Source: {match_web_source.group()}')
@@ -1633,7 +1634,6 @@ for file in upload_queue:
     logging.info(f'uploading the following file: {file}')
     # finally add this current loops media file to the dict 'torrent_info' and let all the function calls below handle it now
     torrent_info["upload_media"] = file
-
 
 
 
