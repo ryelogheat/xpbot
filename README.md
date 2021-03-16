@@ -30,7 +30,6 @@ Automatically parse, rename, and upload torrents to trackers using the UNIT3D co
     
 
 # Wiki
-### [Home](https://github.com/ryelogheat/xpbot/wiki)
 ### [Available args & user input](https://github.com/ryelogheat/xpbot/wiki/Args-and-User-Input)
 ### [config.env breakdown](https://github.com/ryelogheat/xpbot/wiki/config.env)
 ### [/site_templates/*.json guide](https://github.com/ryelogheat/xpbot/wiki/Tracker-Templates)
