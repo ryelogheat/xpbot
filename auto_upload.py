@@ -368,7 +368,11 @@ def analyze_video_file(missing_value):
             subprocess.run([bdinfo_script, torrent_info["upload_media"], "--mpls=" + largest_playlist])
 
             shutil.move(f'{torrent_info["upload_media"]}BDINFO.{torrent_info["raw_file_name"]}.txt', f'{working_folder}/temp_upload/mediainfo.txt')
-            os.system(f"/usr/bin/sed -i '0,/<---- END FORUMS PASTE ---->/d' {working_folder}/temp_upload/mediainfo.txt")
+            if os.path.isfile("/usr/bin/sed"):
+                sed_path = "/usr/bin/sed"
+            else:
+                sed_path = "/bin/sed"
+            os.system(f"{sed_path} -i '0,/<---- END FORUMS PASTE ---->/d' {working_folder}/temp_upload/mediainfo.txt")
             # torrent_info["mediainfo"] = f'{working_folder}/temp_upload/mediainfo.txt'
             return f'{working_folder}/temp_upload/mediainfo.txt'
 
