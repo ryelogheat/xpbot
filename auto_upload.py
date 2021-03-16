@@ -794,8 +794,27 @@ def identify_miscellaneous_details():
         logging.info(f'Used Regex to extract: [bold]{match_repack.group()}[/bold] from the filename')
 
 
+
+    # --- Bluray disc type --- #
+    if torrent_info["source_type"] == "bluray_disc":
+        # This is just based on resolution & size so we just match that info up to the key we create below
+        possible_types = [25, 50, 66, 100]
+        bluray_prefix = 'uhd' if torrent_info["screen_size"] == "2160p" else 'bd'
+        total_size = sum(f.stat().st_size for f in Path(torrent_info["upload_media"]).glob('**/*') if f.is_file())
+
+
+        for possible_type in possible_types:
+            if total_size < int(possible_type * 1000000000):
+                torrent_info["bluray_disc_type"] = str(f'{bluray_prefix}_{possible_type}')
+                break
+
+
+
+
+
+
+
     # Bluray disc regions
-    # TODO finish adding support for Bluray discs
     bluray_region = {
         "USA": "USA",
         "FRE": "FRE",
@@ -1222,9 +1241,9 @@ def choose_right_tracker_keys():
     # Save a few key values in a list that we'll use later to identify the resolution and type
     relevant_torrent_info_values = []
     for torrent_info_k in torrent_info:
-        if torrent_info_k in ["source_type", "screen_size"]:
+        if torrent_info_k in ["source_type", "screen_size", "bluray_disc_type"]:
             relevant_torrent_info_values.append(torrent_info[torrent_info_k])
-
+    print(relevant_torrent_info_values)
     def identify_resolution_source(target_val):
         # 0 = optional
         # 1 = required
@@ -1243,7 +1262,9 @@ def choose_right_tracker_keys():
                 if sub_val == 1:
                     total_num_of_required_keys += 1
                     # Now check if the sub_key is in the relevant_torrent_info_values list
+                    print(sub_key)
                     if sub_key in str(relevant_torrent_info_values).lower():
+                        print("SUBKEY IN relevant_torrent_info_values")
                         total_num_of_acquired_keys += 1
 
                 if sub_val == 2:
