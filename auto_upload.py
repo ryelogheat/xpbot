@@ -1573,14 +1573,13 @@ else:
     console.print("\nOK, we will try and upload to these sites now..\n", style="bold blue")
 
 
+
+
 # The user has confirmed what sites to upload to at this point (or auto_mode is set to true)
-# Get media file details now, first we check if the user manually provides the path to some media
-# if the user didn't then we try and upload whatever is in the 'upload_dir_path' (if specified in config.env)
+# Get media file details now, check to see if we are running in "batch mode"
 
-
-
-
-# TODO make args.path required, tbh a user has to specify which trackers they wanna upload to so they can also specify the path at the same time
+# TODO an issue with batch mode currently is that we have a lot of "assert" & sys.exit statements during the prep work we do for each upload, if one of these "assert/quit" statements
+#  get triggered, then it will quit the entire script instead of just moving on to the next file in the list 'upload_queue'
 
 # ---------- Batch mode prep ---------- #
 if args.batch and len(args.path) > 1:
@@ -1601,79 +1600,30 @@ elif args.batch and not os.path.isdir(args.path[0]):
     console.print("Exiting...\n", style='bright_red bold')
     sys.exit()
 
-
-
+# all files we upload (even if its 1) get added to this list
 upload_queue = []
 
 if args.batch:
-    # This should be OK to upload, we've caught all the obvious issues above ^^ so if this runs then it should be OK
+    logging.info("running in batch mode")
+    logging.info(f"Uploading all the items in the folder: {args.path}")
+    # This should be OK to upload, we've caught all the obvious issues above ^^ so if this is able to run we should be alright
     for arg_file in glob.glob(f'{args.path[0]}/*'):
-        upload_queue.append(arg_file)
+        # Since we are in batch mode, we upload every file/folder we find in the path the user specified
+        upload_queue.append(arg_file)  # append each item to the list 'upload_queue' now
 else:
+    logging.info("Running in regular '-path' mode, starting upload now")
+    # This means the ran the script normally and specified a direct path to some media (or multiple media items, in which case we append it like normal to the list 'upload_queue')
     for arg_file in args.path:
         upload_queue.append(arg_file)
 
-
-
+# Now for each file we've been supplied (batch more or just the user manually specifying multiple files) we create a loop here that uploads each of them until none are left
 for file in upload_queue:
+    # Remove all old temp_files & data from the previous upload
     delete_leftover_files()
     torrent_info.clear()
-
+    logging.info(f'uploading the following file: {file}')
+    # finally add this current loops media file to the dict 'torrent_info' and let all the function calls below handle it now
     torrent_info["upload_media"] = file
-
-
-
-
-# if args.path:
-#     print(args.path)
-#     print(len(args.path))
-#
-#     quit()
-#     # The arg input is returned as a list even if it is just 1 item
-#     try:
-#         if not os.path.exists(args.path[0]):
-#             raise AssertionError("The '-path' you provided does not exist, try again")
-#     except AssertionError as err:  # Log AssertionError in the logfile and quit here
-#         logging.exception("The '-path' you provided does not exist, try again")
-#         raise err
-#     # If the AssertionError hasn't been thrown yet that means that the content exists and we can save the path to the dict 'torrent_info'
-#     torrent_info["upload_media"] = args.path[0]
-# else:
-#     # input arg hasn't been supplied so try the 'upload_dir_path' path now
-#     try:
-#         # if len(upload_to_trackers) == 0 that means that the user either didn't provide any site at all, the site is not supported, or the API key isn't provided
-#         if not os.path.exists(os.getenv('upload_dir_path')):
-#             raise AssertionError("The upload dir '{}' does not exist & '-path' was not used to specify a file/folder to upload".format(os.getenv('upload_dir_path')))
-#     except AssertionError as err:  # Log AssertionError in the logfile and quit here
-#         logging.exception("You did not provide a valid path/file for us to upload")
-#         raise err
-#     # If the AssertionError hasn't been thrown yet that means that the path exists, we now need to select a particular file/folder from that path
-#
-#     if len(os.listdir(os.getenv('upload_dir_path'))) > 1:
-#         logging.critical('You can only have 1 file or folder in the "upload" folder at a time..')
-#         logging.info('you need to remove some of these files {list_files} until only 1 folder/file is left'.format(
-#             list_files=os.listdir(os.getenv('upload_dir_path'))))
-#
-#         console.print(
-#             "\n[bold][red]You need to choose & remove [green]{num_until_1}[/green] of the following files/folders from the upload_dir_path location:[/red][/bold]\n"
-#             "{list_files}".format(
-#                 num_until_1=int(len(os.listdir(os.getenv('upload_dir_path'))) - 1),
-#                 list_files=os.listdir(os.getenv('upload_dir_path'))
-#             ))
-#         sys.exit(console.print("\nYou can only have 1 file or folder in the 'upload' folder at a time... quitting now\n", style="bold red"))
-#     elif len(os.listdir(os.getenv('upload_dir_path'))) < 1:
-#         logging.critical("No files/folders found in the 'upload' folder... quitting now")
-#         sys.exit(console.print("\nNo files/folders found in the 'upload' folder... quitting now\n", style="bold red"))
-#     else:
-#         # Sigh... Some people are not going to use a trailing forward slash so we do that here real quick
-#         if not str(f"{os.getenv('upload_dir_path')}{os.listdir(os.getenv('upload_dir_path'))[0]}").endswith("/"):
-#             torrent_info["upload_media"] = str(f"{os.getenv('upload_dir_path')}/{os.listdir(os.getenv('upload_dir_path'))[0]}")
-#         else:
-#             torrent_info["upload_media"] = str(f"{os.getenv('upload_dir_path')}{os.listdir(os.getenv('upload_dir_path'))[0]}")
-
-
-
-
 
 
 
