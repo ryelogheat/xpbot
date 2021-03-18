@@ -263,8 +263,8 @@
       "bluray_disc": "{title} {year} {s00e00} {screen_size} {region} {source} {hdr} {dv} {video_codec} {audio_codec} {atmos} {audio_channels} {release_group}",
       "bluray_remux": "{title} {year} {s00e00} {repack} {screen_size} {uhd} {hybrid} {source} {remux} {hdr} {dv} {video_codec} {audio_codec} {audio_channels} {atmos} {release_group}",
       "bluray_encode": "{title} {year} {s00e00} {repack} {screen_size} {uhd} {hybrid} {source} {audio_codec} {atmos} {audio_channels} {hdr} {dv} {video_codec} {release_group}",
-      "web": "{title} {year} {s00e00} {repack} {screen_size} {web_source} {web_type} {audio_codec} {atmos} {audio_channels} {hdr} {dv} {video_codec} {release_group}",
-      "hdtv": "{title} {year} {s00e00} {repack} {screen_size} {hybrid} {source} {audio_codec} {audio_channels} {video_codec} {release_group}",
+      "web": "{title} {year} {s00e00} {repack} {screen_size} {episode_title} {web_source} {web_type} {audio_codec} {atmos} {audio_channels} {hdr} {dv} {video_codec} {release_group}",
+      "hdtv": "{title} {year} {s00e00} {repack} {screen_size} {episode_title} {hybrid} {source} {audio_codec} {audio_channels} {video_codec} {release_group}",
       "dvd_disc": "{title} {year} {s00e00} {repack} {screen_size} {region} {hybrid} {source} {video_codec} {audio_codec} {audio_channels} {release_group}",
       "dvd_remux": "{title} {year} {s00e00} {repack} {screen_size} {hybrid} {source} {video_codec} {remux} {audio_codec} {audio_channels} {release_group}"
     },
