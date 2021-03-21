@@ -24,7 +24,6 @@ from pymediainfo import MediaInfo
 # Rich is used for printing text & interacting with user input
 from rich import box
 from rich.table import Table
-from rich.markup import escape
 from rich.console import Console
 from rich.traceback import install
 from rich.prompt import Prompt, Confirm
