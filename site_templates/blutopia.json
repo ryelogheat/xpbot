@@ -54,10 +54,14 @@
 
     "type_id": {
       "1": {
-        "bluray_disc": 1
+        "disc": 1,
+        "bluray_disc": 2,
+        "dvd_disc": 2
       },
       "3": {
-        "bluray_remux": 1
+        "remux": 1,
+        "bluray_remux": 2,
+        "dvd_remux": 2
       },
       "12": {
         "bluray_encode": 1
@@ -147,8 +151,7 @@
       "bluray_encode": "{title} {year} {s00e00} {repack} {screen_size} {uhd} {hybrid} {source} {audio_codec} {atmos} {audio_channels} {hdr} {dv} {video_codec} {release_group}",
       "web": "{title} {year} {s00e00} {repack} {screen_size} {web_source} {web_type} {audio_codec} {atmos} {audio_channels} {hdr} {dv} {video_codec} {release_group}",
       "hdtv": "{title} {year} {s00e00} {repack} {screen_size} {hybrid} {source} {audio_codec} {audio_channels} {video_codec} {release_group}",
-      "dvd_disc": "{title} {year} {s00e00} {repack} {screen_size} {region} {hybrid} {source} {video_codec} {audio_codec} {audio_channels} {release_group}",
-      "dvd_remux": "{title} {year} {s00e00} {repack} {screen_size} {hybrid} {source} {video_codec} {remux} {audio_codec} {audio_channels} {release_group}"
+      "dvd": "{title} {year} {s00e00} {edition} {repack} {screen_size} {region} {hybrid} {source} {video_codec} {remux} {audio_codec} {atmos} {audio_channels} {release_group}"
     },
 
     "movie": {
@@ -157,8 +160,7 @@
       "bluray_encode": "{title} {year} {edition} {repack} {screen_size} {uhd} {hybrid} {source} {audio_codec} {atmos} {audio_channels} {hdr} {dv} {video_codec} {release_group}",
       "web": "{title} {year} {edition} {repack} {screen_size} {hybrid} {web_source} {web_type} {audio_codec} {atmos} {audio_channels} {hdr} {dv} {video_codec} {release_group}",
       "hdtv": "{title} {year} {edition} {repack} {screen_size} {hybrid} {source} {audio_codec} {atmos} {audio_channels} {video_codec} {release_group}",
-      "dvd_disc": "{title} {year} {edition} {repack} {screen_size} {region} {source} {video_codec} {audio_codec} {atmos} {audio_channels} {release_group}",
-      "dvd_remux": "{title} {year} {edition} {repack} {screen_size} {hybrid} {source} {remux} {video_codec} {audio_codec} {audio_channels} {release_group}"
+      "dvd": "{title} {year} {edition} {repack} {screen_size} {region} {hybrid} {source} {video_codec} {remux} {audio_codec} {atmos} {audio_channels} {release_group}"
     }
   },
 
