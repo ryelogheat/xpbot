@@ -906,6 +906,11 @@ def identify_miscellaneous_details():
             torrent_info["scene"] = 'true'
 
 
+    # --------- SD? --------- #
+    res = re.sub("[^0-9]", "", torrent_info["screen_size"])
+    if int(res) <= 720:
+        torrent_info["sd"] = 1
+
 
 
 
@@ -1105,9 +1110,20 @@ def format_title(json_config):
     # ------------------ Load correct "naming config" ------------------ #
     # Here we open the uploads corresponding .json file and using the current uploads "source" we pull in a custom naming config
     # this "naming config" can individually tweaked for each site & "content_type" (bluray_encode, web, etc)
-    tracker_torrent_name_style_config = torrent_info["source_type"] if str(torrent_info["source"]).lower() != "web" else "web"
-    tracker_torrent_name_style = json_config['torrent_title_format'][torrent_info["type"]][str(tracker_torrent_name_style_config).replace("dvd_rip", "dvd_remux")]
-    # TODO fix this ^^ idk clump all DVD releases into one profile "DVD"?
+
+    # Because 'webrips' & 'webdls' have basically the same exact naming style we convert the 'source_type' to just 'web' (we do something similar to DVDs as well)
+    if str(torrent_info["source"]).lower() == "dvd":
+        config_profile = "dvd"
+    elif str(torrent_info["source"]).lower() == "web":
+        config_profile = "web"
+    else:
+        config_profile = torrent_info["source_type"]
+
+
+
+    # tracker_torrent_name_style_config = torrent_info["source_type"] if str(torrent_info["source"]).lower() != "web" else "web"
+    tracker_torrent_name_style_config = config_profile
+    tracker_torrent_name_style = json_config['torrent_title_format'][torrent_info["type"]][str(tracker_torrent_name_style_config)]
 
 
 
@@ -1140,12 +1156,6 @@ def format_title(json_config):
 
 
     # ------------------ Actual format the title now ------------------ #
-
-    # Firstly we have a dict of all the torrent_info keys that are directly relevant to the torrent title
-    # all_keys = {"title": "title", "year": "year", "edition": "edition", "season_or_episode": "s00e00", "repack": "repack", "screen_size": "screen_size", "region": "region", "uhd": "uhd",
-    #             "hybrid": "hybrid", "source": "source", "remux": "remux", "web_source": "web_source", "web_type": "web_type", "audio_codec": "audio_codec",
-    #             "atmos": "atmos", "audio_channels": "audio_channels", "hdr": "hdr", "dv": "dv", "video_codec": "video_codec", "group": "release_group"}
-
 
     # This dict will store the "torrent_info" response for each item in the "naming config"
     generate_format_string = {}
@@ -1259,6 +1269,7 @@ def choose_right_tracker_keys():
             total_num_of_required_keys = 0
             total_num_of_acquired_keys = 0
 
+            # If we have a list of options to choose from, each match is saved here
             total_num_of_acquired_keys_val = 0
 
             select_from_optional_values_list = []
@@ -1275,28 +1286,35 @@ def choose_right_tracker_keys():
                         total_num_of_acquired_keys_val += 1
                     select_from_optional_values_list.append(sub_key)
 
+            # print(f'\nselect_from_optional_values_list: {select_from_optional_values_list}')
+            # print(f'total_num_of_required_keys: {total_num_of_required_keys}')
+            # print(f'total_num_of_acquired_keys_val: {total_num_of_acquired_keys_val}')
+            # print(f'total_num_of_acquired_keys: {total_num_of_acquired_keys}\n')
+
+
             if int(total_num_of_required_keys) == int(total_num_of_acquired_keys):
                 possible_match_layer_1.append(key)
                 # We check for " == 0" so that if we get a profile that matches all the "1" then we can break immediately (2160p BD remux requires 'remux', '2160p', 'bluray')
                 # so if we find all those values in select_from_optional_values_list list then we can break knowing that we hit 100% of the required values instead of having to
                 # cycle through the "optional" values and select one of them
                 if len(select_from_optional_values_list) == 0 and key != "Other":
-                    # print("FOUND THE CHOSEN KEY!!!")
                     break
 
                 if len(select_from_optional_values_list) >= 2 and int(total_num_of_acquired_keys_val) == 1:
-                    # if int(total_num_of_acquired_keys_val) == 1:
                     break
 
             if len(possible_match_layer_1) >= 2 and "Other" in possible_match_layer_1:
-                # if "Other" in possible_match_layer_1:
                 possible_match_layer_1.remove("Other")
+
 
         if len(possible_match_layer_1) == 1:
             target_val = possible_match_layer_1.pop()
         else:
-            # this means we have 2 potential matches
-            target_val = "{}/{} might not be allowed on site as the {}".format(torrent_info["source"], torrent_info["screen_size"], target_val)
+            # this means we either have 2 potential matches or no matches at all (this happens if the media does not fit any of the allowed parameters)
+            logging.critical('Unable to find a suitable "source" match for this file')
+            logging.error("Its possible that the media you are trying to upload is not allowed on site (e.g. DVDRip to BLU is not allowed")
+            console.print(f'\nThis "Type" ([bold]{torrent_info["source"]}[/bold]) or this "Resolution" ([bold]{torrent_info["screen_size"]}[/bold]) is not allowed on this tracker', style='Red underline', highlight=False)
+            sys.exit()
 
         return target_val
 
@@ -1355,6 +1373,7 @@ def choose_right_tracker_keys():
     # This mainly applies to BHD since they are the tracker with the most 'Optional' fields, BLU/ACM only have 'nfo_file' as an optional item which we take care of later
     # It is for this reason ^^ why the following block is coded with BHD specifically in mind
     for optional_key, optional_value in optional_items.items():
+
         # -!-!- Editions -!-!- #
         if optional_key == 'edition' and 'edition' in torrent_info:
             # First we remove any 'fluff' so that we can try to match the edition to the list BHD has, if not we just upload it as a custom edition
@@ -1406,6 +1425,9 @@ def choose_right_tracker_keys():
         #     # So far
         #     tracker_settings[optional_key] = torrent_info["nfo_file"]
 
+
+        if optional_key == 'sd' and "sd" in torrent_info:
+            tracker_settings[optional_key] = 1
 
 
 # ---------------------------------------------------------------------- #
@@ -1460,7 +1482,7 @@ def upload_to_site(upload_to, tracker_api_key):
             # Add torrent_info data to each row
             review_upload_settings_text_table.add_row(
                 f"[deep_pink1]{payload_k}[/deep_pink1]",
-                f"[dodger_blue1]{escape(payload_v)}[/dodger_blue1]")
+                f"[dodger_blue1]{payload_v}[/dodger_blue1]")
         console.print(review_upload_settings_text_table)
 
         # ------- Show the user a table of the API KEY/VAL (FILE) that we are about to send ------- #
@@ -1755,7 +1777,7 @@ for file in upload_queue:
                     description.write(line)
 
                 # Finally append the entire thing with some shameless self promotion ;) & and the closing [/center] tags and some line breaks
-                description.write(f' {bbcode_line_break}{bbcode_line_break} Uploaded with {"[color=red]<3[/color]" if str(tracker).upper() == "BHD" else "❤"} using [url=https://github.com/ryelogheat/xpbot]XpBot[/url][/center]')
+                description.write(f' {bbcode_line_break}{bbcode_line_break} Uploaded with {"[color=red]<3[/color]" if str(tracker).upper() == "BHD" else "[color=red]❤[/color]"} using [url=https://github.com/ryelogheat/xpbot]XpBot[/url][/center]')
 
             # Add the finished file to the 'torrent_info' dict
             torrent_info["description"] = f'{working_folder}/temp_upload/description.txt'
@@ -1809,10 +1831,7 @@ for file in upload_queue:
 
         for tracker_settings_key, tracker_settings_value in sorted(tracker_settings.items()):
             # Add torrent_info data to each row
-            tracker_settings_table.add_row(
-                "[purple][bold]{}[/bold][/purple]".format(tracker_settings_key),
-                tracker_settings_value,
-            )
+            tracker_settings_table.add_row(f"[purple][bold]{tracker_settings_key}[/bold][/purple]", str(tracker_settings_value))
         console.print(tracker_settings_table)
 
     # -------- Post Processing --------
@@ -1849,10 +1868,7 @@ for file in upload_queue:
 
     for torrent_info_key, torrent_info_value in sorted(torrent_info.items()):
         # Add torrent_info data to each row
-        torrent_info_table.add_row(
-            "[purple][bold]{}[/bold][/purple]".format(torrent_info_key),
-            torrent_info_value,
-        )
+        torrent_info_table.add_row("[purple][bold]{}[/bold][/purple]".format(torrent_info_key), str(torrent_info_value))
     console.print(torrent_info_table)
 
     script_end_time = time.perf_counter()
