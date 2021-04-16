@@ -159,6 +159,14 @@
   },
 
 
-  "banned_groups": []
+  
+    "banned_groups": [
+      "GalaxyTV",
+      "TGx",
+      "YIFY",
+      "YTS",
+      "RARBG",
+      "Will1896"
+    ]
 
 }
