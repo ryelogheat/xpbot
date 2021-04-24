@@ -118,7 +118,14 @@ def upload_screens(img_host, api_key, working_folder, torrent_title):
         list_of_images = []  # here is a list of all images we are uploading, we don't need to base64 encode them like we do with Chevereto sites
         for file in os.listdir(working_folder + "/images/screenshots/"):
             list_of_images.append(working_folder + "/images/screenshots/" + file)  # append to dict
-        asyncio.run(imgbox_upload(list_of_images))  # call the function that uploads images to imgbox
+                                      
+        # asyncio.run only works on python 3.7+
+        # asyncio.run(imgbox_upload(list_of_images))  # call the function that uploads images to imgbox
+
+        # Python 3.6 friendly alternative
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(imgbox_upload(list_of_images))
+                                      
         logging.info(f"imgbox edit_url: {edit_url[0]}")  # log the edit url
 
     # return the dict so we can verify the images successfully uploaded and if so then format the links into bbcode
