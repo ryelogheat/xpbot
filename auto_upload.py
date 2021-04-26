@@ -270,7 +270,9 @@ def identify_type_and_basic_info(full_path):
 
         if 'raw_video_file' not in torrent_info:
             logging.critical(f"The folder {torrent_info['upload_media']} does not contain any video files")
-            sys.exit(f"The folder {torrent_info['upload_media']} does not contain any video files")
+            console.print(f"The folder {torrent_info['upload_media']} does not contain any video files\n\n", style='bold red')
+            return "skip_to_next_file"
+            # sys.exit(f"The folder {torrent_info['upload_media']} does not contain any video files")
 
         torrent_info["raw_file_name"] = os.path.basename(os.path.dirname(f"{full_path}/"))  # this is used to isolate the folder name
     else:
@@ -1645,16 +1647,57 @@ for file in upload_queue:
     # Remove all old temp_files & data from the previous upload
     delete_leftover_files()
     torrent_info.clear()
-    logging.info(f'uploading the following file: {file}')
-    # finally add this current loops media file to the dict 'torrent_info' and let all the function calls below handle it now
-    torrent_info["upload_media"] = file
+
+    # File we're uploading
+    console.print(f'Uploading: [bold][blue]{file}[/blue][/bold]')
+
+    # If the path the user specified is a folder with .rar files in it then we unpack the video file & set the torrent_info key equal to the extracted video file
+    if os.path.isdir(file):
+        # Set the 'upload_media' right away, if we end up extracting from a rar archive we will just overwriting it with the .mkv we extracted
+        torrent_info["upload_media"] = file
+
+        # Now we check to see if the dir contains rar files
+        rar_file = glob.glob(f"{os.path.join(file, '')}*rar")
+        if rar_file:
+            logging.info(f"'{file}' is a .rar archive, extracting now")
+            logging.info(f"rar file: {rar_file[0]}")
+
+            # Now verify that unrar is installed
+            unrar_sys_package = '/usr/bin/unrar'
+            if os.path.isfile(unrar_sys_package):
+                logging.info("Found 'unrar' system package, Using it to extract the video file now")
+
+                # run the system package unrar and save the extracted file to its parent dir
+                subprocess.run([unrar_sys_package, 'e', rar_file[0], file])
+
+                # This is how we identify which file we just extracted (Last modified)
+                list_of_files = glob.glob(f"{os.path.join(file, '')}*")
+                latest_file = max(list_of_files, key=os.path.getctime)
+
+                # Overwrite the value for 'upload_media' with the path to the video file we just extracted
+                torrent_info["upload_media"] = latest_file
+
+
+            # If the user doesn't have unrar installed then we let them know here and move on to the next file (if exists)
+            else:
+                console.print('unrar is not installed, Unable to extract the rar archinve\n', style='bold red')
+                logging.critical('"unrar" is not installed, Unable to extract rar archive')
+                logging.info('Perhaps first try "sudo apt-get install unrar" then run this script again')
+                continue  # Skip this entire 'file upload' & move onto the next (if exists)
+
+    else:
+        torrent_info["upload_media"] = file
+        logging.info(f'uploading the following file: {file}')
 
 
 
 
     # -------- Basic info --------
     # So now we can start collecting info about the file/folder that was supplied to us (Step 1)
-    identify_type_and_basic_info(torrent_info["upload_media"])
+    if identify_type_and_basic_info(torrent_info["upload_media"]) == 'skip_to_next_file':
+        # If there is an issue with the file & we can't upload we use this check to skip the current file & move on to the next (if exists)
+        continue
+
     # Update discord channel
     if discord_url:
         requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content=Uploading: **{torrent_info["upload_media"]}**')
