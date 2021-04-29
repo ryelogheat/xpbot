@@ -272,12 +272,12 @@
     },
 
     "movie": {
-      "bluray_disc": "{title} {year} {edition} {repack} {screen_size} {region} {source} {hdr} {dv} {video_codec} {audio_codec} {atmos} {audio_channels} {release_group}",
-      "bluray_remux": "{title} {year} {edition} {repack} {screen_size} {uhd} {hybrid} {source} {remux} {hdr} {dv} {video_codec} {audio_codec} {atmos} {audio_channels} {release_group}",
-      "bluray_encode": "{title} {year} {edition} {repack} {screen_size} {uhd} {hybrid} {source} {audio_codec} {atmos} {audio_channels} {hdr} {dv} {video_codec} {release_group}",
-      "web": "{title} {year} {edition} {repack} {screen_size} {hybrid} {web_source} {web_type} {audio_codec} {atmos} {audio_channels} {hdr} {dv} {video_codec} {release_group}",
-      "hdtv": "{title} {year} {edition} {repack} {screen_size} {hybrid} {source} {audio_codec} {atmos} {audio_channels} {video_codec} {release_group}",
-      "dvd": "{title} {year} {edition} {repack} {screen_size} {region} {hybrid} {source} {video_codec} {remux} {audio_codec} {atmos} {audio_channels} {release_group}"
+      "bluray_disc": "{title} {year} {edition} {repack} {source} {screen_size} {region} {hdr} {dv} {video_codec} {audio_codec} {atmos} {audio_channels} {release_group}",
+      "bluray_remux": "{title} {year} {edition} {repack} {source} {screen_size} {uhd} {hybrid} {hdr} {dv} {audio_codec} {atmos} {audio_channels} {video_codec} {remux} {release_group}",
+      "bluray_encode": "{title} {year} {edition} {repack} {source} {screen_size} {uhd} {hybrid} {audio_codec} {atmos} {audio_channels} {hdr} {dv} {video_codec} {release_group}",
+      "web": "{title} {year} {edition} {repack} {web_source} {web_type} {screen_size} {hybrid} {audio_codec} {atmos} {audio_channels} {hdr} {dv} {video_codec} {release_group}",
+      "hdtv": "{title} {year} {edition} {repack} {source} {screen_size} {hybrid} {audio_codec} {atmos} {audio_channels} {video_codec} {release_group}",
+      "dvd": "{title} {year} {edition} {repack} {source} {screen_size} {region} {hybrid} {video_codec} {remux} {audio_codec} {atmos} {audio_channels} {release_group}"
     }
   },
 
