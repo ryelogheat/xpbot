@@ -1043,7 +1043,7 @@ def get_external_id(id_site, id_value, content_type):
 
     if id_site == 'imdb':
         tmdb_id_request = requests.get(get_tmdb_id_url).json()
-        logging.info(f"GET Request: {tmdb_id_request}")
+        logging.info(f"GET Request: {get_tmdb_id_url}")
         for item in tmdb_id_request:
             if len(tmdb_id_request[item]) == 1:
                 return str(tmdb_id_request[item][0]["id"])
