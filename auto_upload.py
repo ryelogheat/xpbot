@@ -1725,9 +1725,16 @@ for file in upload_queue:
 
     # -------- Get TMDB & IMDB ID --------
     # If the TMDB/IMDB was not supplied then we need to search TMDB for it using the title & year
+
     for media_id_key, media_id_val in {"tmdb": args.tmdb, "imdb": args.imdb}.items():
         if media_id_val is not None and len(media_id_val[0]) > 1:  # we include ' > 1 ' to prevent blank ID's and issues later
-            torrent_info[media_id_key] = media_id_val[0]
+
+            # We have one more check here to verify that the "tt" is included for the IMDB ID (TMDB won't accept it if it doesnt)
+            if media_id_key == 'imdb' and not str(media_id_val[0]).lower().startswith('tt'):
+                torrent_info["imdb"] = f'tt{media_id_val[0]}'
+            else:
+                torrent_info[media_id_key] = media_id_val[0]
+
 
     if all(x in torrent_info for x in ['imdb', 'tmdb']):
         # This means both the TMDB & IMDB ID are already in the torrent_info dict
