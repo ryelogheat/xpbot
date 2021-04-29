@@ -198,12 +198,12 @@ def take_upload_screens(duration, upload_media_import, torrent_title_import, bas
                     logging.info("All {num_of_imgs} images have been upload to {host}".format(num_of_imgs=num_of_screenshots, host=host_site))
                     # This means all the screenshots have been uploaded and we can move on
                     for thumbnail_png, web_url in upload_status.items():
-                        write_bbcode_description_txt.write("[url={web_url}][img=350x350]{img_url}[/img][/url]".format(web_url=web_url, img_url=thumbnail_png) + " ")
+                        write_bbcode_description_txt.write("[url={web_url}][img=300x300]{img_url}[/img][/url]".format(web_url=web_url, img_url=thumbnail_png) + " ")
 
                         # If 50% or more of the screenshots specified get uploaded we can move on (Modify the threshold below to percentage that works for you)
                 elif int(len(upload_status.items())) >= int(int(num_of_screenshots) / 2):
                     for thumbnail_png, web_url in upload_status.items():
-                        write_bbcode_description_txt.write("[url={web_url}][img=350x350]{img_url}[/img][/url]".format(web_url=web_url, img_url=thumbnail_png) + " ")
+                        write_bbcode_description_txt.write("[url={web_url}][img=300x300]{img_url}[/img][/url]".format(web_url=web_url, img_url=thumbnail_png) + " ")
 
                         # All images BBCODE has been written in so now we add the closing tags and quit this script since everything is done
                 logging.info("We've uploaded {num_of_uploaded_imgs} to {image_host}".format(num_of_uploaded_imgs=len(upload_status.items()), image_host=host_site))
