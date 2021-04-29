@@ -13,7 +13,7 @@
 
 
 # ------ Update the following info to be accurate ------ #
-log_location_for_autodl_matches='/path/to/where/you/this/logfile/xpbot-autodl.log'
+log_location_for_autodl_matches='/path/to/where/you/want/this/logfile/xpbot-autodl.log'
 location_of_auto_upload_py='/path/to/xpbot/auto_upload.py'
 
 

@@ -91,6 +91,8 @@ else:
 
 bdinfo_script = os.getenv('bdinfo_script')
 
+is_live_on_site = str(os.getenv('live')).lower()
+
 
 # Setup args
 parser = argparse.ArgumentParser()
@@ -1350,8 +1352,8 @@ def choose_right_tracker_keys():
 
                     # BHD requires the key "live" (0 = Sent to drafts and 1 = Live on site)
                     elif required_key == "live":
-                        live = '1' if str(os.getenv('live')).upper() == 'TRUE' else '0'
-                        logging.info(f"Upload live status: {'Live (Visible)' if str(os.getenv('live')).upper() == 'TRUE' else 'Draft (Hidden)'}")
+                        live = '1' if is_live_on_site == 'true' else '0'
+                        logging.info(f"Upload live status: {'Live (Visible)' if is_live_on_site == 'true' else 'Draft (Hidden)'}")
                         tracker_settings[config["translation"][translation_key]] = live
 
                     # If the user supplied the "-anon" argument then we want to pass that along when uploading
@@ -1576,6 +1578,15 @@ if args.reupload:
     if auto_mode == 'false':
         logging.info('Temporarily switching "auto_mode" to "true" for this autodl reupload')
         auto_mode = 'true'
+
+
+    # REMOVE ME AFTER TESTING
+    # -------------------------------------------------------------- #
+    # currently testing "auto reupload" to BHD since it has a "drafts" section
+    # (This only executes if this bot is called from autodl/bash script so ignore it if you aren't auto reuploading)
+    if is_live_on_site == 'true':
+        is_live_on_site = 'false'
+    # -------------------------------------------------------------- #
 
 
     if str(os.getenv('translation_needed')).lower() == 'true':
