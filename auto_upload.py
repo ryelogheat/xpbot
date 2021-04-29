@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 
 # default included packages
 import os
@@ -58,11 +58,12 @@ logging.basicConfig(filename='{}/upload_script.log'.format(working_folder),
 load_dotenv(f'{working_folder}/config.env')
 
 # Used to correctly select json file
-acronym_to_tracker = {"blu": "blutopia", "bhd": "beyond-hd", "r4e": "racing4everyone", "acm": "asiancinema", "ath": "aither"}
+acronym_to_tracker = {"blu": "blutopia", "bhd": "beyond-hd", "r4e": "racing4everyone", "acm": "asiancinema", "ath": "aither", "k4l": "k4li"}
 
 # Now assign some of the values we get from 'config.env' to global variables we use later
 api_keys_dict = {
     'bhd_api_key': os.getenv('BHD_API_KEY'),
+    'k4l_api_key': os.getenv('K4L_API_KEY'),
     'blu_api_key': os.getenv('BLU_API_KEY'),
     'acm_api_key': os.getenv('ACM_API_KEY'),
     'r4e_api_key': os.getenv('R4E_API_KEY'),
@@ -563,8 +564,8 @@ def analyze_video_file(missing_value):
     if missing_value == "audio_codec":
 
         # We store some common audio code translations in this dict
-        audio_codec_dict = {"AC3": "DD", "AC3+": "DD+", "Dolby Digital Plus": "DD+", "Dolby Digital": "DD", "AAC": "AAC", "AC-3": "DD", "FLAC": "FLAC", "DTS": "DTS", "Opus": "Opus", "E-AC-3": "DD+", "A_EAC3": "DD+",
-                            "A_AC3": "DD"}
+        audio_codec_dict = {"AC3": "DD", "AC3+": "DDP", "Dolby Digital Plus": "DDP", "Dolby Digital": "DD", "AAC": "AAC", "AC-3": "DD", "FLAC": "FLAC", "DTS": "DTS", "Opus": "Opus", "E-AC-3": "DDP", "A_EAC3": "DDP",
+                            "A_AC3": "DD", "DDP": "DDP"}
 
         # First check to see if GuessIt inserted an audio_codec into torrent_info and if it did then we can verify its formatted correctly
         if "audio_codec" in torrent_info:
@@ -1769,14 +1770,14 @@ for file in upload_queue:
             # Now open up the correct files and format all the bbcode/tags below
             with open(torrent_info["bbcode_images"], 'r') as bbcode, open(f'{working_folder}/temp_upload/description.txt', 'a') as description:
                 # First add the [center] tags, "Screenshots" header, Size tags etc etc. This only needs to be written once which is why its outside of the 'for loop' below
-                description.write(f'{bbcode_line_break}[center] ---------------------- [size=22]Screenshots[/size] ---------------------- {bbcode_line_break}{bbcode_line_break}')
+                description.write(f'[center]')
 
                 # Now write in the actual screenshot bbcode
                 for line in bbcode:
                     description.write(line)
 
                 # Finally append the entire thing with some shameless self promotion ;) & and the closing [/center] tags and some line breaks
-                description.write(f' {bbcode_line_break}{bbcode_line_break} Uploaded with {"[color=red]<3[/color]" if str(tracker).upper() == "BHD" else "[color=red]❤[/color]"} using [url=https://github.com/ryelogheat/xpbot]XpBot[/url][/center]')
+                description.write(f'{bbcode_line_break}[/center]')
 
             # Add the finished file to the 'torrent_info' dict
             torrent_info["description"] = f'{working_folder}/temp_upload/description.txt'
