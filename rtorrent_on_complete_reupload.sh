@@ -1,0 +1,37 @@
+#!/bin/bash
+
+
+##### This requires you to be using r(u)torrent & have autodl-irssi configured #####
+# (More complete documentation coming soon)
+
+
+
+# -------- Following lines need to be appended to rtorrent.rc -------- #
+# method.insert = d.data_path, simple, "if=(d.is_multi_file), (cat,(d.directory),/), (cat,(d.directory),/,(d.name))"
+# method.set_key = event.download.finished,complete,"execute=/mnt/local/torrents/scripts/rtorrent_on_complete_reupload.sh,$d.name=,$d.data_path=,$d.custom1=,$d.custom=upload_to_tracker"
+
+
+
+# ------ Update the following info to be accurate ------ #
+log_location_for_autodl_matches='/path/to/where/you/this/logfile/xpbot-autodl.log'
+location_of_auto_upload_py='/path/to/xpbot/auto_upload.py'
+
+
+
+# You don't need to rename or do anything with these variables
+title=$1
+path=$2
+imdb_id=$3
+upload_to=$4
+time_stamp=$(date -u +"%Y-%m-%d %H:%M:%SZ")
+
+# If the 'upload_to' variable is not empty we trigger auto_upload.py with all required info & the  -reupload  flag which sets some custom settings for this type of upload
+# (set the 'upload_to' arg in your autodl filter settings)
+if [ -n "$upload_to" ]; then
+
+  # Log what we are uploading for future reference
+  echo '{"time_stamp":"'"$time_stamp"'","title":"'"$title"'","path":"'"$path"'","imdb_id":"'"$imdb_id"'","upload_to":"'"$upload_to"'"}' &>>$log_location_for_autodl_matches
+  /usr/bin/python3 $location_of_auto_upload_py -t "$upload_to" -p "$path" -imdb "$imdb_id" -reupload "$title"
+
+fi
+
