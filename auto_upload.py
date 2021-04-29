@@ -94,14 +94,19 @@ bdinfo_script = os.getenv('bdinfo_script')
 
 # Setup args
 parser = argparse.ArgumentParser()
+# Commonly used args:
+parser.add_argument('-t', '--trackers', nargs='*', required=True, help="Tracker(s) to upload to. Space-separates if multiple (no commas)")
+parser.add_argument('-p', '--path', nargs='*', required=True, help="Use this to provide path(s) to file/folder")
 parser.add_argument('-tmdb', nargs=1, help="Use this to manually provide the TMDB ID")
 parser.add_argument('-imdb', nargs=1, help="Use this to manually provide the IMDB ID")
-parser.add_argument('-t', '--trackers', nargs='*', required=True, help="Tracker(s) to upload to. Space-separates if multiple (no commas)")
 parser.add_argument('-anon', action='store_true', help="if you want your upload to be anonymous (no other info needed, just input '-anon'")
-parser.add_argument('-p', '--path', nargs='*', required=True, help="Use this to provide path(s) to file/folder")
+
+# Less commonly used args (Not essential for most)
+# parser.add_argument('-reupload', action='store_true', help="This is used in conjunction with autodl to automatically re-upload any filter matches")
+parser.add_argument('-reupload', nargs='*', help="This is used in conjunction with autodl to automatically re-upload any filter matches")
 parser.add_argument('-batch', action='store_true', help="Pass this arg if you want to upload all the files/folder within the folder you specify with the '-p' arg")
-parser.add_argument('-e', '--edition', nargs='*', help="Manually provide an 'edition' (e.g. Criterion Collection, Extended, Remastered, etc)")
 parser.add_argument('-disc', action='store_true', help="If you are uploading a raw dvd/bluray disc you need to pass this arg")
+parser.add_argument('-e', '--edition', nargs='*', help="Manually provide an 'edition' (e.g. Criterion Collection, Extended, Remastered, etc)")
 parser.add_argument('-nfo', nargs=1, help="Use this to provide the path to an nfo file you want to upload")
 args = parser.parse_args()
 
@@ -1553,6 +1558,48 @@ def upload_to_site(upload_to, tracker_api_key):
 script_start_time = time.perf_counter()
 starting_new_upload = f" {'-' * 24} Starting new upload {'-' * 24} "
 logging.info(starting_new_upload)
+
+# Set the value of args.path to a variable that we can overwrite with a path translation later (if needed)
+user_supplied_paths = args.path
+
+# Verify the script is in "auto_mode" and if needed map rtorrent download path to system path
+if args.reupload:
+    logging.info('reuploading a match from autodl')
+
+
+    # Firstly remove the underscore separator from the trackers the user provided in the autodl filter & make replace args.trackers with it
+    args.trackers = str(args.trackers[0]).split('_')
+
+
+    # set auto_mode equal to True for this upload (if its not already)
+    # since we are reuploading autodl matches its probably safe to say this is all automated & no one will be available to approve or interact with any prompt
+    if auto_mode == 'false':
+        logging.info('Temporarily switching "auto_mode" to "true" for this autodl reupload')
+        auto_mode = 'true'
+
+
+    if str(os.getenv('translation_needed')).lower() == 'true':
+        # Currently it is only possible for 1 path to be based from autodl but just in case & for futureproofing we will treat it as a list of multiple paths
+        logging.info('Translating paths... ("translation_needed" flag set to True in config.env) ')
+
+        # Just in case the user didn't end the path with a forward slash...
+        host_path = f"{os.getenv('host_path')}/".replace('//', '/')
+        remote_path = f"{os.getenv('remote_path')}/".replace('//', '/')
+
+        # Now we replace the remote (rtorrent) path with the system one
+        for path in user_supplied_paths:
+            translated_path = str(path).replace(remote_path, host_path)
+
+            # Remove the old path from the list & add the new one in its place
+            user_supplied_paths.remove(path)
+            user_supplied_paths.append(translated_path)
+
+            # And finally log the changes
+            logging.info(f'rtorrent path: {path}')
+            logging.info(f'Translated path: {translated_path}')
+
+
+
 # If a user has supplied a discord webhook URL we can send updates to that channel
 if discord_url:
     requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content={starting_new_upload}')
@@ -1639,7 +1686,7 @@ if args.batch:
 else:
     logging.info("Running in regular '-path' mode, starting upload now")
     # This means the ran the script normally and specified a direct path to some media (or multiple media items, in which case we append it like normal to the list 'upload_queue')
-    for arg_file in args.path:
+    for arg_file in user_supplied_paths:
         upload_queue.append(arg_file)
 
 # Now for each file we've been supplied (batch more or just the user manually specifying multiple files) we create a loop here that uploads each of them until none are left
