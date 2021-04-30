@@ -58,7 +58,9 @@ logging.basicConfig(filename='{}/upload_script.log'.format(working_folder),
 load_dotenv(f'{working_folder}/config.env')
 
 # Used to correctly select json file
-acronym_to_tracker = {"blu": "blutopia", "bhd": "beyond-hd", "r4e": "racing4everyone", "acm": "asiancinema", "ath": "aither"}
+acronym_to_tracker = {"blu": "blutopia", "bhd": "beyond-hd",
+                      "r4e": "racing4everyone", "acm": "asiancinema",
+                      "ath": "aither", "telly": "telly"}
 
 # Now assign some of the values we get from 'config.env' to global variables we use later
 api_keys_dict = {
@@ -67,6 +69,7 @@ api_keys_dict = {
     'acm_api_key': os.getenv('ACM_API_KEY'),
     'r4e_api_key': os.getenv('R4E_API_KEY'),
     'ath_api_key': os.getenv('ATH_API_Key'),
+    'telly_api_key': os.getenv('TELLY_API_Key'),
     'tmdb_api_key': os.getenv('TMDB_API_KEY')
 }
 # Make sure the TMDB API is provided
@@ -184,10 +187,22 @@ def identify_type_and_basic_info(full_path):
 
             # Check to see if this is an individual episode, if so then add that episode number to the dict 'season_episode_num_dict'
             if 'episode' in guessit(full_path):
-                season_episode_num_dict["episode_num"] = int(guessit(full_path)["episode"])
+                season_episode_num_dict["episode_num"] = guessit(full_path)["episode"]
+
 
             # now format the Season & Episode (basically add '0' in front of the number if num is < 10)
             for season_episode_key, season_episode_value in season_episode_num_dict.items():
+
+
+                # if type(season_episode_value) is list:
+                #     # This must be a multipart episode then
+                #     final_episode_form = ''
+                #     for episode_part in season_episode_value:
+                #         episode_part = f'0{episode_part}' if int(episode_part) < 10 else f'{episode_part}'
+                #
+                #         print(episode_part)
+
+
                 if int(season_episode_value) < 10:
                     season_episode_num_dict[season_episode_key] = str(
                         "{S_or_E}0{S_or_E_num}".format(S_or_E=season_episode_key[:1].upper(),
@@ -198,7 +213,7 @@ def identify_type_and_basic_info(full_path):
                                                       S_or_E_num=str(season_episode_value)))
 
             # Now combine the Season and Episode into one result (S00E00 format) and add it the torrent_info dict
-            if len(season_episode_num_dict.keys()) == 2:  # This is an episode
+            if len(season_episode_num_dict.keys()) <= 2:  # This is an episode
                 torrent_info["s00e00"] = str(season_episode_num_dict["season_num"]) + str(
                     season_episode_num_dict["episode_num"])
             else:  # this is a full season
