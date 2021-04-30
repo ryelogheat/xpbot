@@ -36,9 +36,12 @@
     "anonymous": "string",
     "sd": "string",
     "stream": "string",
+
+    "tvdb": "string",
     "tmdb": "string",
     "imdb": "string",
     "mal": "string",
+    "igdb": "string",
 
     "category_id": {
       "1": "movie",
