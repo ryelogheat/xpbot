@@ -67,6 +67,7 @@ api_keys_dict = {
     'acm_api_key': os.getenv('ACM_API_KEY'),
     'r4e_api_key': os.getenv('R4E_API_KEY'),
     'ath_api_key': os.getenv('ATH_API_Key'),
+    'ntelogo_api_key': os.getenv('NTELOGO_API_Key'),
     'tmdb_api_key': os.getenv('TMDB_API_KEY')
 }
 # Make sure the TMDB API is provided
