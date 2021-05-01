@@ -48,7 +48,10 @@
       "2": "episode"
     },
 
-    "type_id": {
+    
+    
+    
+        "type_id": {
       "1": {
         "disc": 1,
         "bluray_disc": 2,
@@ -63,15 +66,20 @@
         "bluray_encode": 1
       },
       "4": {
-        "webdl": 1
+        "webdl": 0
       },
       "5": {
-        "webrip": 1
+        "webrip": 0
       },
       "6": {
-        "hdtv": 1
+        "hdtv": 0
       }
     },
+
+    
+    
+    
+    
 
 
     "resolution_id": {
