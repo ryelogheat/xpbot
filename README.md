@@ -6,6 +6,7 @@ Automatically parse, rename, and upload torrents to trackers using the UNIT3D co
 * BHD - [**Beyond-HD**](https://beyond-hd.me)
 * BLU - [**Blutopia**](https://blutopia.xyz)
 * R4E - [**Racing4Everyone**](https://racing4everyone.eu/)
+* Telly - [**Telly.wtf**](https://telly.wtf/)
 
 
 <!-- Basic setup -->
