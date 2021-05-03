@@ -7,7 +7,7 @@ Automatically parse, rename, and upload torrents to trackers using the UNIT3D co
 * BLU - [**Blutopia**](https://blutopia.xyz)
 * R4E - [**Racing4Everyone**](https://racing4everyone.eu/)
 * Telly - [**Telly.wtf**](https://telly.wtf/)
-* Ntelogo - [**Ntelogo.org**](https://ntelogo.org/)
+* Ntelogo - [**Ntelogo**](https://ntelogo.org/)
 
 
 <!-- Basic setup -->
@@ -17,7 +17,7 @@ Automatically parse, rename, and upload torrents to trackers using the UNIT3D co
 3. Rename `config.env.sample` to `config.env`
 4. Fill out the required values in `config.env`
 5. Ensure you have [mediainfo](https://mediaarea.net/en/MediaInfo/Download/Ubuntu) & [ffmpeg](https://ffmpeg.org/download.html) installed on your system
-6. Run the script using [Python3](https://www.python.org/downloads/)
+6. Run the script using [Python3](https://www.python.org/downloads/) (If you're having issues or torf isn't installing, try python3.9)
    
    <br /> 
    
