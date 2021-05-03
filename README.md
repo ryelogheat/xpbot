@@ -7,7 +7,7 @@ Automatically parse, rename, and upload torrents to trackers using the UNIT3D co
 * BLU - [**Blutopia**](https://blutopia.xyz)
 * R4E - [**Racing4Everyone**](https://racing4everyone.eu/)
 * Telly - [**Telly.wtf**](https://telly.wtf/)
-* Ntelogo - [**Ntelogo.org**](https://ntelogo.org/)
+* Ntelogo - [**Ntelogo**](https://ntelogo.org/)
 
 
 <!-- Basic setup -->
