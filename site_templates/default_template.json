@@ -25,7 +25,14 @@
 
     "sd": "<Optional_key>",
     "optimized": "<Optional_key>",
-    "nfo_file": "<Optional_key>"
+    "nfo_file": "<Optional_key>",
+
+    "internal": "internal",
+    "featured": "featured",
+    "doubleup": "doubleup",
+    "sticky": "sticky",
+    "freeleech": "free"
+
   },
 
 
