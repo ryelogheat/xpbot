@@ -18,14 +18,20 @@
     "tmdb": "tmdb",
     "imdb": "imdb",
     "anon": "anonymous",
-
     "live": "live",
     "sd": "sd",
     "tvdb": "tvdb",
     "mal": "mal",
     "igdb": "igdb",
     "optimized": "stream",
-    "nfo_file": "nfo"
+    "nfo_file": "nfo",
+
+    "internal": "internal",
+    "featured": "featured",
+    "doubleup": "doubleup",
+    "sticky": "sticky",
+    "freeleech": "free"
+
   },
 
 
@@ -38,14 +44,17 @@
     "sd": "string",
     "stream": "string",
 
-
     "tvdb": "string",
     "tmdb": "string",
     "imdb": "string",
     "mal": "string",
     "igdb": "string",
 
-
+    "internal": "string",
+    "free": "string",
+    "featured": "string",
+    "doubleup": "string",
+    "sticky": "string",
 
     "category_id": {
       "1": "movie",
