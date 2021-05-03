@@ -60,7 +60,7 @@ load_dotenv(f'{working_folder}/config.env')
 # Used to correctly select json file
 acronym_to_tracker = {"blu": "blutopia", "bhd": "beyond-hd",
                       "r4e": "racing4everyone", "acm": "asiancinema",
-                      "ath": "aither", "telly": "telly"}
+                      "ath": "aither", "telly": "telly", "ntelogo": "ntelogo"}
 
 # Now assign some of the values we get from 'config.env' to global variables we use later
 api_keys_dict = {
@@ -68,8 +68,9 @@ api_keys_dict = {
     'blu_api_key': os.getenv('BLU_API_KEY'),
     'acm_api_key': os.getenv('ACM_API_KEY'),
     'r4e_api_key': os.getenv('R4E_API_KEY'),
-    'ath_api_key': os.getenv('ATH_API_Key'),
-    'telly_api_key': os.getenv('TELLY_API_Key'),
+    'ath_api_key': os.getenv('ATH_API_KEY'),
+    'telly_api_key': os.getenv('TELLY_API_KEY'),
+    'ntelogo_api_key': os.getenv('NTELOGO_API_KEY'),
     'tmdb_api_key': os.getenv('TMDB_API_KEY')
 }
 # Make sure the TMDB API is provided
@@ -1524,6 +1525,9 @@ def upload_to_site(upload_to, tracker_api_key):
     response = requests.request("POST", url, data=payload, files=files)
     logging.info(f"POST Request: {url}")
     logging.info(f"Response code: {response.status_code}")
+
+    console.print(f'Site response: [blue]{response.text}[/blue]')
+    logging.info(response.text)
 
     if response.status_code == 200:
         logging.info(f"upload response for {upload_to}: {response.text.encode('utf8')}")
