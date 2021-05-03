@@ -17,7 +17,7 @@ Automatically parse, rename, and upload torrents to trackers using the UNIT3D co
 3. Rename `config.env.sample` to `config.env`
 4. Fill out the required values in `config.env`
 5. Ensure you have [mediainfo](https://mediaarea.net/en/MediaInfo/Download/Ubuntu) & [ffmpeg](https://ffmpeg.org/download.html) installed on your system
-6. Run the script using [Python3](https://www.python.org/downloads/)
+6. Run the script using [Python3](https://www.python.org/downloads/) (If you're having issues or torf isn't installing, try python3.9)
    
    <br /> 
    
