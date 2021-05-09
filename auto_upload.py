@@ -1121,13 +1121,12 @@ def compare_tmdb_data_local(content_type):
 
 
 def format_title(json_config):
-
+    # If the user provides this arg with the title right after in double quotes then we automatically use that
     if args.title:
-        print(args.title)
         torrent_info["torrent_title"] = str(args.title[0])
 
+    # If the user does not manually provide the title (Most common) then we pull the renaming template from *.json & use all the info we gathered earlier to generate a title
     else:
-
         # ------------------ Load correct "naming config" ------------------ #
         # Here we open the uploads corresponding .json file and using the current uploads "source" we pull in a custom naming config
         # this "naming config" can individually tweaked for each site & "content_type" (bluray_encode, web, etc)
