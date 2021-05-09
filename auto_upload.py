@@ -109,6 +109,7 @@ parser.add_argument('-anon', action='store_true', help="if you want your upload 
 
 # Less commonly used args (Not essential for most)
 # parser.add_argument('-reupload', action='store_true', help="This is used in conjunction with autodl to automatically re-upload any filter matches")
+parser.add_argument('-title', nargs=1, help="Custom title provided by the user")
 parser.add_argument('-reupload', nargs='*', help="This is used in conjunction with autodl to automatically re-upload any filter matches")
 parser.add_argument('-batch', action='store_true', help="Pass this arg if you want to upload all the files/folder within the folder you specify with the '-p' arg")
 parser.add_argument('-disc', action='store_true', help="If you are uploading a raw dvd/bluray disc you need to pass this arg")
@@ -1121,71 +1122,77 @@ def compare_tmdb_data_local(content_type):
 
 def format_title(json_config):
 
-    # ------------------ Load correct "naming config" ------------------ #
-    # Here we open the uploads corresponding .json file and using the current uploads "source" we pull in a custom naming config
-    # this "naming config" can individually tweaked for each site & "content_type" (bluray_encode, web, etc)
+    if args.title:
+        print(args.title)
+        torrent_info["torrent_title"] = str(args.title[0])
 
-    # Because 'webrips' & 'webdls' have basically the same exact naming style we convert the 'source_type' to just 'web' (we do something similar to DVDs as well)
-    if str(torrent_info["source"]).lower() == "dvd":
-        config_profile = "dvd"
-    elif str(torrent_info["source"]).lower() == "web":
-        config_profile = "web"
     else:
-        config_profile = torrent_info["source_type"]
 
+        # ------------------ Load correct "naming config" ------------------ #
+        # Here we open the uploads corresponding .json file and using the current uploads "source" we pull in a custom naming config
+        # this "naming config" can individually tweaked for each site & "content_type" (bluray_encode, web, etc)
 
-
-    # tracker_torrent_name_style_config = torrent_info["source_type"] if str(torrent_info["source"]).lower() != "web" else "web"
-    tracker_torrent_name_style_config = config_profile
-    tracker_torrent_name_style = json_config['torrent_title_format'][torrent_info["type"]][str(tracker_torrent_name_style_config)]
-
-
-
-    # ------------------ Set some default naming styles here ------------------ #
-    # Fix Bluray
-    if "bluray" in torrent_info["source_type"]:
-        if "disc" in torrent_info["source_type"]:
-            # Raw bluray discs have a "-" between the words "Blu" & "Ray"
-            torrent_info["source"] = "Blu-ray"
+        # Because 'webrips' & 'webdls' have basically the same exact naming style we convert the 'source_type' to just 'web' (we do something similar to DVDs as well)
+        if str(torrent_info["source"]).lower() == "dvd":
+            config_profile = "dvd"
+        elif str(torrent_info["source"]).lower() == "web":
+            config_profile = "web"
         else:
-            # Bluray encodes & Remuxs just use the complete word "Bluray"
-            torrent_info["source"] = "Bluray"
-
-    # Now fix WEB
-    if str(torrent_info["source"]).lower() == "web":
-        if torrent_info["source_type"] == "webrip":
-            torrent_info["web_type"] = "WEBRip"
-        else:
-            torrent_info["web_type"] = "WEB-DL"
-
-    # Fix DVD
-    if str(torrent_info["source"]).lower() == "dvd":
-        if torrent_info["source_type"] in ('dvd_remux', 'dvd_disc'):
-            # later in the script if this ends up being a DVD Remux we will add the tag "Remux" to the torrent title
-            torrent_info["source"] = "DVD"
-        else:
-            # Anything else is just a dvdrip
-            torrent_info["source"] = "DVDRip"
+            config_profile = torrent_info["source_type"]
 
 
 
-    # ------------------ Actual format the title now ------------------ #
+        # tracker_torrent_name_style_config = torrent_info["source_type"] if str(torrent_info["source"]).lower() != "web" else "web"
+        tracker_torrent_name_style_config = config_profile
+        tracker_torrent_name_style = json_config['torrent_title_format'][torrent_info["type"]][str(tracker_torrent_name_style_config)]
 
-    # This dict will store the "torrent_info" response for each item in the "naming config"
-    generate_format_string = {}
 
-    temp_load_torrent_info = tracker_torrent_name_style.replace("{", "").replace("}", "").split(" ")
-    for item in temp_load_torrent_info:
-        # Here is were we actual get the torrent_info response and add it to the "generate_format_string" dict we declared earlier
-        generate_format_string[item] = torrent_info[item] if item in torrent_info else ""
 
-    formatted_title = ""  # This is the final torrent title, we add any info we get from "torrent_info" to it using the "for loop" below
-    for key, value in generate_format_string.items():
-        if len(value) != 0:  # ignore no matches (e.g. most TV Shows don't have the "year" added to its title so unless it was directly specified in the filename we also ignore it)
-            formatted_title = f'{formatted_title}{"-" if key == "release_group" else " "}{value}'
+        # ------------------ Set some default naming styles here ------------------ #
+        # Fix Bluray
+        if "bluray" in torrent_info["source_type"]:
+            if "disc" in torrent_info["source_type"]:
+                # Raw bluray discs have a "-" between the words "Blu" & "Ray"
+                torrent_info["source"] = "Blu-ray"
+            else:
+                # Bluray encodes & Remuxs just use the complete word "Bluray"
+                torrent_info["source"] = "Bluray"
 
-    # Finally save the "formatted_title" into torrent_info which later will get passed to the dict "tracker_settings" which is used to store the payload for the actual POST upload request
-    torrent_info["torrent_title"] = str(formatted_title[1:])
+        # Now fix WEB
+        if str(torrent_info["source"]).lower() == "web":
+            if torrent_info["source_type"] == "webrip":
+                torrent_info["web_type"] = "WEBRip"
+            else:
+                torrent_info["web_type"] = "WEB-DL"
+
+        # Fix DVD
+        if str(torrent_info["source"]).lower() == "dvd":
+            if torrent_info["source_type"] in ('dvd_remux', 'dvd_disc'):
+                # later in the script if this ends up being a DVD Remux we will add the tag "Remux" to the torrent title
+                torrent_info["source"] = "DVD"
+            else:
+                # Anything else is just a dvdrip
+                torrent_info["source"] = "DVDRip"
+
+
+
+        # ------------------ Actual format the title now ------------------ #
+
+        # This dict will store the "torrent_info" response for each item in the "naming config"
+        generate_format_string = {}
+
+        temp_load_torrent_info = tracker_torrent_name_style.replace("{", "").replace("}", "").split(" ")
+        for item in temp_load_torrent_info:
+            # Here is were we actual get the torrent_info response and add it to the "generate_format_string" dict we declared earlier
+            generate_format_string[item] = torrent_info[item] if item in torrent_info else ""
+
+        formatted_title = ""  # This is the final torrent title, we add any info we get from "torrent_info" to it using the "for loop" below
+        for key, value in generate_format_string.items():
+            if len(value) != 0:  # ignore no matches (e.g. most TV Shows don't have the "year" added to its title so unless it was directly specified in the filename we also ignore it)
+                formatted_title = f'{formatted_title}{"-" if key == "release_group" else " "}{value}'
+
+        # Finally save the "formatted_title" into torrent_info which later will get passed to the dict "tracker_settings" which is used to store the payload for the actual POST upload request
+        torrent_info["torrent_title"] = str(formatted_title[1:])
 
     # Update discord channel
     if discord_url:
