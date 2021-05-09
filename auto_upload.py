@@ -1596,15 +1596,6 @@ if args.reupload:
         auto_mode = 'true'
 
 
-    # REMOVE ME AFTER TESTING
-    # -------------------------------------------------------------- #
-    # currently testing "auto reupload" to BHD since it has a "drafts" section
-    # (This only executes if this bot is called from autodl/bash script so ignore it if you aren't auto reuploading)
-    if is_live_on_site == 'true':
-        is_live_on_site = 'false'
-    # -------------------------------------------------------------- #
-
-
     if str(os.getenv('translation_needed')).lower() == 'true':
         # Currently it is only possible for 1 path to be based from autodl but just in case & for futureproofing we will treat it as a list of multiple paths
         logging.info('Translating paths... ("translation_needed" flag set to True in config.env) ')
