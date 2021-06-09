@@ -47,7 +47,7 @@ def upload_screens(img_host, api_key, working_folder, torrent_title):
     # Both imgbb & freeimage are based on Chevereto which the API has us upload 1 image at a time while imgbox uses something custom and we upload a list of images at the same time
     # So if we try and upload to imgbox for every 1 image we end up uploading num_of_screenshots^2 which results in a ton of dupes & temp ban
 
-    if img_host in ('imgbb', 'freeimage', 'imgyukle'):
+    if img_host in ('imgbb', 'freeimage'):
         for img in track(glob.glob("{}*.png".format(working_folder + "/images/screenshots/")), description="Uploading..."):
 
             data = {
@@ -61,14 +61,19 @@ def upload_screens(img_host, api_key, working_folder, torrent_title):
                     response_test = requests.post(url, data=data)
                     if response_test.ok:
                         response = response_test.json()
+                        print(response)
                     else:
-                        break
+                        return "failed"
                 except requests.exceptions.RequestException:
                     logging.error("Failed to upload {file_in_question} to {host_in_question}".format(file_in_question=img, host_in_question=img_host))
                     console.print(f"upload to [bold]{img_host}[/bold] has failed!", style="Red")
                     return "failed"
                 # Save the thumb and full page links into a dict
-                thumbs_links_dict[response["data"]["medium"]["url"]] = response['data']['url_viewer']
+                try:
+                    thumbs_links_dict[response["data"]["medium"]["url"]] = response['data']['url_viewer']
+                except KeyError:
+                    return "failed"
+
 
             if img_host == "freeimage":
                 url = "https://freeimage.host/api/1/upload"
@@ -84,22 +89,28 @@ def upload_screens(img_host, api_key, working_folder, torrent_title):
                     return "failed"
                 thumbs_links_dict[response['image']['medium']['url']] = response['image']['url_viewer']
 
-            if img_host == "imgyukle":
-                # We just replace the dict key "image" to "source" which is what imgyukle requires
-                data["source"] = data.pop("image")
 
-                url = "https://imgyukle.com/api/1/upload"
-                try:
-                    response_test = requests.post(url, data=data)
-                    if response_test.ok:
-                        response = response_test.json()
-                    else:
-                        break
-                except requests.exceptions.RequestException:
-                    logging.error("Failed to upload {file_in_question} to {host_in_question}".format(file_in_question=img, host_in_question=img_host))
-                    console.print(f"upload to [bold]{img_host}[/bold] has failed!", style="Red")
-                    return "failed"
-                thumbs_links_dict[response['image']['medium']['url']] = response['image']['url_viewer']
+            # ------- Revoked default API key & not possible to get new key ------- #
+            # --------------------------------------------------------------------- #
+            # if img_host == "imgyukle":
+            #     # We just replace the dict key "image" to "source" which is what imgyukle requires
+            #     data["source"] = data.pop("image")
+            #
+            #     url = "https://imgyukle.com/api/1/upload"
+            #     try:
+            #         response_test = requests.post(url, data=data)
+            #         if response_test.ok:
+            #             response = response_test.json()
+            #         else:
+            #             return "failed"
+            #     except requests.exceptions.RequestException:
+            #         logging.error("Failed to upload {file_in_question} to {host_in_question}".format(file_in_question=img, host_in_question=img_host))
+            #         console.print(f"upload to [bold]{img_host}[/bold] has failed!", style="Red")
+            #         return "failed"
+            #     try:
+            #         thumbs_links_dict[response['image']['medium']['url']] = response['image']['url_viewer']
+            #     except KeyError:
+            #         return "failed"
 
 
     # Instead of coding our own solution we'll use the awesome project https://github.com/plotski/pyimgbox to upload to imgbox
@@ -109,18 +120,28 @@ def upload_screens(img_host, api_key, working_folder, torrent_title):
                 async for submission in gallery.add(list_of_filepath):
                     if not submission['success']:
                         logging.error(f"{submission['filename']}: {submission['error']}")
+                        return "failed"
                     else:
                         thumbs_links_dict[submission["thumbnail_url"]] = submission["web_url"]
                         if submission["edit_url"] not in edit_url:
                             edit_url.append(submission["edit_url"])
 
         edit_url = []  # We save the edit url to logfile so we can delete images if needed later
-        list_of_images = []  # here is a list of all images we are uploading, we don't need to base64 encode them like we do with Chevereto sites
-        for file in os.listdir(working_folder + "/images/screenshots/"):
-            list_of_images.append(working_folder + "/images/screenshots/" + file)  # append to dict
-                                      
-        # asyncio.run only works on python 3.7+
-        # asyncio.run(imgbox_upload(list_of_images))  # call the function that uploads images to imgbox
+        list_of_images = []  # here is a list of all images we are uploading
+
+        for file in os.listdir(f"{working_folder}/images/screenshots/"):
+            # Check if the screenshot is under the imgbox 10MB filesize limit
+            if os.path.getsize(f"{working_folder}/images/screenshots/{file}") < 10485760:  # Bytes
+                list_of_images.append(f"{working_folder}/images/screenshots/{file}")  # append to dict
+            else:
+                logging.error('Screenshot size is over imgbox limit of 10MB, skipping image...')
+            # asyncio.run only works on python 3.7+
+            # asyncio.run(imgbox_upload(list_of_images))  # call the function that uploads images to imgbox
+
+        # If all the screenshots are over 10MB then we don't even attempt to upload instead we return "failed" & try another image host (if enabled)
+        if len(list_of_images) == 0:
+            logging.error('All screenshots are over imgbox 10MB limit, skipping imgbox upload')
+            return "failed"
 
         # Python 3.6 friendly alternative
         loop = asyncio.get_event_loop()
@@ -161,7 +182,7 @@ def take_upload_screens(duration, upload_media_import, torrent_title_import, bas
 
     # Verify that at least 1 image host is enabled so we don't waste time taking unneeded screenshots
     upload_to_host_dict = {}
-    for host in range(1, 5):  # current number of image hosts available (4)
+    for host in range(1, 4):  # current number of image hosts available (3)
         if len(os.getenv('img_host_{}'.format(host))) != 0:
             if len(os.getenv('{host_site}_api_key'.format(host_site=os.getenv('img_host_{}'.format(host))))) == 0:
                 console.print(f"Can't upload to '{os.getenv('img_host_{}'.format(host))}' without an API key", style='Red', highlight=False)
@@ -227,7 +248,7 @@ def take_upload_screens(duration, upload_media_import, torrent_title_import, bas
 
         # If we haven't quit yet then that means we tried all hosts and none of them worked so now we move on with what we have
         logging.error("We were unable to upload to any of the enabled image hosts, so we are going to finish the torrent upload without images")
-        write_bbcode_description_txt.write("\n[/center]")
+        write_bbcode_description_txt.write("\nNone\n")
         write_bbcode_description_txt.close()
         # Update discord channel
         if discord_url:
