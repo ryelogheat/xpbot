@@ -15,6 +15,7 @@ from pathlib import Path
 
 # These packages need to be installed
 import requests
+from requests.exceptions import Timeout
 from torf import Torrent
 from ffmpy import FFprobe
 from guessit import guessit
@@ -1059,11 +1060,9 @@ def get_external_id(id_site, id_value, content_type):
 def search_for_mal_id(content_type, tmdb_id):
     # if 'content_type == tv' then we need to get the TVDB ID since we're going to need it to try and get the MAL ID
     if content_type == 'tv':
-        get_tvdb_id = f" https://api.themoviedb.org/3/tv/{tmdb_id}/external_ids?api_key={os.getenv('TMDB_API_KEY')}&language=en-US"
-        get_tvdb_id_response = requests.get(get_tvdb_id).json()
-        # Look for the tvdb_id key
-        if 'tvdb_id' in get_tvdb_id_response and get_tvdb_id_response['tvdb_id'] is not None:
-            torrent_info["tvdb"] = str(get_tvdb_id_response['tvdb_id'])
+        get_tvdb_id_response = requests.get(f"https://api.themoviedb.org/3/tv/{tmdb_id}/external_ids?api_key=227d16a0e0104d623acf4332b870a241&language=en-US").json()
+        # if a TVDB ID exists or not we still assign some num (0) to the torrent_info['tvdb'] otherwise we get a KeyError
+        torrent_info["tvdb"] = str(get_tvdb_id_response['tvdb_id']) if 'tvdb_id' in get_tvdb_id_response and get_tvdb_id_response['tvdb_id'] is not None else '0'
 
     # We use this small dict to auto fill the right values into the url request below
     content_type_to_value_dict = {'movie': 'tmdb', 'tv': 'tvdb'}
@@ -1074,11 +1073,13 @@ def search_for_mal_id(content_type, tmdb_id):
     # You can test it out yourself with the url: http://195.201.146.92:5000/api/?tmdb=10515 to see what it returns (it literally just returns the number "513" which is the corresponding MAL ID)
     # I might just start include the "tmdb --> mal .json" map with this bot instead of selfhosting it as an api, but for now it works so I'll revisit the subject later
     tmdb_tvdb_id_to_mal = f"http://195.201.146.92:5000/api/?{content_type_to_value_dict[content_type]}={torrent_info[content_type_to_value_dict[content_type]]}"
-    mal_id_response = requests.get(tmdb_tvdb_id_to_mal)
-
-    # If the response returns http code 200 that means that a number has been returned, it'll either be the real mal ID or it will just be 0, either way we can use it
-    if mal_id_response.status_code == 200:
-        torrent_info["mal"] = str(mal_id_response.json())
+    try:
+        mal_id_response = requests.get(tmdb_tvdb_id_to_mal, timeout=2)
+        print('Request to mal_id api succeeded')
+        torrent_info["mal"] = str(mal_id_response.json()) if mal_id_response == 200 else 0
+    except Timeout:
+        print('Request to mal_id api timed out')
+        torrent_info["mal"] = 0
 
 
 def compare_tmdb_data_local(content_type):
