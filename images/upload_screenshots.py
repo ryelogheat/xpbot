@@ -57,37 +57,56 @@ def upload_screens(img_host, api_key, working_folder, torrent_title):
 
             if img_host == "imgbb":
                 url = "https://api.imgbb.com/1/upload"
+
                 try:
                     response_test = requests.post(url, data=data)
                     if response_test.ok:
                         response = response_test.json()
-                        print(response)
                     else:
                         return "failed"
                 except requests.exceptions.RequestException:
                     logging.error("Failed to upload {file_in_question} to {host_in_question}".format(file_in_question=img, host_in_question=img_host))
                     console.print(f"upload to [bold]{img_host}[/bold] has failed!", style="Red")
                     return "failed"
+
                 # Save the thumb and full page links into a dict
                 try:
-                    thumbs_links_dict[response["data"]["medium"]["url"]] = response['data']['url_viewer']
+                    if "medium" in response["data"]:
+                        thumbs_links_dict[response["data"]["medium"]["url"]] = response['data']['url_viewer']
+                    elif "thumb" in response["data"]:
+                        thumbs_links_dict[response["data"]["thumb"]["url"]] = response['data']['url_viewer']
+                    else:
+                        thumbs_links_dict[response["data"]["url"]] = response['data']['url_viewer']
                 except KeyError:
                     return "failed"
 
 
+
             if img_host == "freeimage":
                 url = "https://freeimage.host/api/1/upload"
+
                 try:
                     response_test = requests.post(url, data=data)
                     if response_test.ok:
                         response = response_test.json()
                     else:
-                        break
+                        return "failed"
                 except requests.exceptions.RequestException:
                     logging.error("Failed to upload {file_in_question} to {host_in_question}".format(file_in_question=img, host_in_question=img_host))
                     console.print(f"upload to [bold]{img_host}[/bold] has failed!", style="Red")
                     return "failed"
-                thumbs_links_dict[response['image']['medium']['url']] = response['image']['url_viewer']
+
+                # Save the thumb and full page links into a dict
+                try:
+                    if "medium" in response["image"]:
+                        thumbs_links_dict[response["image"]["medium"]["url"]] = response['image']['url_viewer']
+                    elif "thumb" in response["image"]:
+                        thumbs_links_dict[response["image"]["thumb"]["url"]] = response['image']['url_viewer']
+                    else:
+                        thumbs_links_dict[response["image"]["url"]] = response['image']['url_viewer']
+                except KeyError:
+                    return "failed"
+
 
 
             # ------- Revoked default API key & not possible to get new key ------- #
