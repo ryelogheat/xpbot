@@ -4,7 +4,7 @@
   "upload_form": "https://blutopia.xyz/api/torrents/upload?api_token={api_key}",
   "torrents_search": "https://blutopia.xyz/api/torrents/filter?api_token={api_key}",
   "source": "blu",
-  "bbcode_line_break": "<br />",
+  "bbcode_line_break": "\n",
 
 
   "translation": {
