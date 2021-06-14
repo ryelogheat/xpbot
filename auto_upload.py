@@ -109,8 +109,8 @@ parser.add_argument('-imdb', nargs=1, help="Use this to manually provide the IMD
 parser.add_argument('-anon', action='store_true', help="if you want your upload to be anonymous (no other info needed, just input '-anon'")
 
 # Less commonly used args (Not essential for most)
-# parser.add_argument('-reupload', action='store_true', help="This is used in conjunction with autodl to automatically re-upload any filter matches")
 parser.add_argument('-title', nargs=1, help="Custom title provided by the user")
+parser.add_argument('-type', nargs=1, help="Use to manually specify 'movie' or 'tv'")
 parser.add_argument('-reupload', nargs='*', help="This is used in conjunction with autodl to automatically re-upload any filter matches")
 parser.add_argument('-batch', action='store_true', help="Pass this arg if you want to upload all the files/folder within the folder you specify with the '-p' arg")
 parser.add_argument('-disc', action='store_true', help="If you are uploading a raw dvd/bluray disc you need to pass this arg")
@@ -153,7 +153,16 @@ def identify_type_and_basic_info(full_path):
     # if we are missing any of these keys then we can call another function that will use ffprobe, pymediainfo, regex, etc etc
     # to try and extract it ourselves, should that fail we can prompt the user (only if auto_mode=false otherwise we just guess and upload what we have)
     keys_we_want_torrent_info = ['release_group', 'episode_title']
-    keys_we_need_torrent_info = ['screen_size', 'source', 'audio_channels', 'type']
+    keys_we_need_torrent_info = ['screen_size', 'source', 'audio_channels']
+
+    if args.type:
+        if args.type[0] in ('tv', 'movie'):
+            torrent_info["type"] = 'episode' if args.type[0] == 'tv' else 'movie'
+        else:
+            keys_we_need_torrent_info.append('type')
+    else:
+        keys_we_need_torrent_info.append('type')
+
     keys_we_need_but_missing_torrent_info = []
     # We can (need to) have some other information in the final torrent title such as 'editions', 'hdr', 'UHD source but 1080p encode', etc
     # All of that is important but not essential right now so we will try to extract that info later in the script
@@ -628,12 +637,17 @@ def analyze_video_file(missing_value):
 
         # If we got something from pymediainfo we can try to analyze it now
         if audio_codec:
+
             if "AAC" in audio_codec:
                 # AAC gets its own 'if' statement because 'audio_codec' can return something like 'AAC LC-SBR' or 'AAC-HE/LC'
                 # Its unnecessary for a torrent title and we only need the "AAC" part
                 logging.info(f'Used pymediainfo to identify the audio codec: {audio_codec}')
                 return "AAC"
 
+            if "FLAC" in audio_codec:
+                # This is similar to the AAC situation right above ^^, on a recent upload I got the value "A_FLAC" which can be shortened to 'FLAC'
+                logging.info(f'Used pymediainfo to identify the audio codec: FLAC')
+                return "FLAC"
 
             if "DTS" in audio_codec:
                 # DTS audio is a bit "special" and has a few possible profiles so we deal with that here
@@ -1891,7 +1905,7 @@ for file in upload_queue:
                     description.write(line)
 
                 # Finally append the entire thing with some shameless self promotion ;) & and the closing [/center] tags and some line breaks
-                description.write(f' {bbcode_line_break}{bbcode_line_break} Uploaded with {"[color=red]<3[/color]" if str(tracker).upper() == "BHD" else "[color=red]❤[/color]"} using [url=https://github.com/ryelogheat/xpbot]XpBot[/url][/center]')
+                description.write(f'{bbcode_line_break}{bbcode_line_break} Uploaded with [color=red]{"<3" if str(tracker).upper() == "BHD" else "❤"}[/color] using [url=https://github.com/ryelogheat/xpbot]XpBot[/url][/center]')
 
             # Add the finished file to the 'torrent_info' dict
             torrent_info["description"] = f'{working_folder}/temp_upload/description.txt'
