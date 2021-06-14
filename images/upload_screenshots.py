@@ -194,7 +194,7 @@ def take_upload_screens(duration, upload_media_import, torrent_title_import, bas
     # Verify that num_of_screenshots is not set to 0
     if num_of_screenshots == "0":
         with open(base_path + "/temp_upload/bbcode_images.txt", "w") as no_images:
-            no_images.write("[b][color=#FF0000][size=22]N/A[/size][/color][/b]")
+            no_images.write("[b][color=#FF0000][size=22]None[/size][/color][/b]")
             no_images.close()
         logging.error('num_of_screenshots is set to 0, continuing without screenshots')
         return "num_of_screenshots is set to 0, continuing without screenshots"
@@ -212,7 +212,7 @@ def take_upload_screens(duration, upload_media_import, torrent_title_import, bas
 
     if len(upload_to_host_dict) == 0:
         with open(base_path + "/temp_upload/bbcode_images.txt", "w") as no_images:
-            no_images.write("[b][color=#FF0000][size=22]N/A[/size][/color][/b]")
+            no_images.write("[b][color=#FF0000][size=22]None[/size][/color][/b]")
             no_images.close()
 
         logging.info("All image hosts are disabled by the user so we'll upload the torrent without screenshots")
