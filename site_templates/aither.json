@@ -4,7 +4,7 @@
   "upload_form": "https://aither.cc/api/torrents/upload?api_token={api_key}",
   "torrents_search": "https://aither.cc/api/torrents/filter?api_token={api_key}",
   "source": "Aither",
-  "bbcode_line_break": "<br />",
+  "bbcode_line_break": "\n",
 
 
   "translation": {
