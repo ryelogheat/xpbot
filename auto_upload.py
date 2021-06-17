@@ -116,6 +116,14 @@ parser.add_argument('-batch', action='store_true', help="Pass this arg if you wa
 parser.add_argument('-disc', action='store_true', help="If you are uploading a raw dvd/bluray disc you need to pass this arg")
 parser.add_argument('-e', '--edition', nargs='*', help="Manually provide an 'edition' (e.g. Criterion Collection, Extended, Remastered, etc)")
 parser.add_argument('-nfo', nargs=1, help="Use this to provide the path to an nfo file you want to upload")
+
+# args for Internal uploads
+parser.add_argument('-internal', action='store_true', help="(Internal) Used to mark an upload as 'Internal'", default=argparse.SUPPRESS)
+parser.add_argument('-freeleech', action='store_true', help="(Internal) Used to give a new upload freeleech", default=argparse.SUPPRESS)
+parser.add_argument('-featured', action='store_true', help="(Internal) feature a new upload", default=argparse.SUPPRESS)
+parser.add_argument('-doubleup', action='store_true', help="(Internal) Give a new upload 'double up' status", default=argparse.SUPPRESS)
+parser.add_argument('-sticky', action='store_true', help="(Internal) Pin the new upload", default=argparse.SUPPRESS)
+
 args = parser.parse_args()
 
 
@@ -1388,6 +1396,11 @@ def choose_right_tracker_keys():
                         logging.info("Uploading anonymously")
                         tracker_settings[config["translation"][translation_key]] = "1"
 
+                    # Adding support for internal args
+                    elif translation_key in ['doubleup', 'featured', 'freeleech', 'internal', 'sticky']:
+                        # print(f"{translation_key} in namespace?: {translation_key in args}")
+                        tracker_settings[config["translation"][translation_key]] = "1" if translation_key in args else "0"
+
                     # This work as a sort of 'catch all', if we don't have the correct data in torrent_info, we just send a 0 so we can successfully post
                     else:
                         tracker_settings[config["translation"][translation_key]] = "0"
@@ -1436,8 +1449,8 @@ def choose_right_tracker_keys():
 
 
         # -!-!- Tags -!-!- #
-        if optional_key == 'tags':
-            # All we currently support regarding tags, is to assign the 'Scene' tag if we are uploading a scene release
+        if optional_key == 'tags':  # (Only supported on BHD)
+            # We only support 2 tags atm, Scene & WEBDL/RIP on bhd
             upload_these_tags_list = []
             for tag in optional_value:
 
