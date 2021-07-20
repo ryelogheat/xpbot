@@ -1,13 +1,38 @@
 # UNIT3D auto upload
 Automatically parse, rename, and upload torrents to trackers using the UNIT3D codebase
 ### Supported sites:
-* ACM - [**AsianCinema**](https://asiancinema.me/)
-* ATH - [**Aither**](https://aither.cc/)
-* BHD - [**Beyond-HD**](https://beyond-hd.me)
-* BLU - [**Blutopia**](https://blutopia.xyz)
-* R4E - [**Racing4Everyone**](https://racing4everyone.eu/)
-* Telly - [**Telly.wtf**](https://telly.wtf/)
-* Ntelogo - [**Ntelogo**](https://ntelogo.org/)
+<table>
+    <tbody>
+    <tr style="text-align: left">
+        <td><strong>ACM</strong></td>
+        <td><strong><a href="https://asiancinema.me">AsianCinema</a></strong></td>
+    </tr>
+    <tr style="text-align: left">
+        <td><strong>ATH</strong></td>
+        <td><strong><a href="https://aither.cc">Aither</a></strong></td>
+    </tr>
+    <tr style="text-align: left">
+        <td><strong>BHD</strong></td>
+        <td><strong><a href="https://beyond-hd.me">Beyond-HD</a></strong></td>
+    </tr>
+    <tr style="text-align: left">
+        <td><strong>BLU</strong></td>
+        <td><strong><a href="https://blutopia.xyz">Blutopia</a></strong></td>
+    </tr>
+    <tr style="text-align: left">
+        <td><strong>R4E</strong></td>
+        <td><strong><a href="https://racing4everyone.eu">Racing4Everyone</a></strong></td>
+    </tr>
+    <tr style="text-align: left">
+        <td><strong>Telly</strong></td>
+        <td><strong><a href="https://telly.wtf">Telly.wtf</a></strong></td>
+    </tr>
+    <tr style="text-align: left">
+        <td><strong>Ntelogo</strong></td>
+        <td><strong><a href="https://ntelogo.org">Ntelogo</a></strong></td>
+    </tr>
+    </tbody>
+</table>
 
 
 <!-- Basic setup -->
