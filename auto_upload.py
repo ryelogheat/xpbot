@@ -901,7 +901,7 @@ def identify_miscellaneous_details():
 
     for word in hdr_hybrid_remux_keyword_search:
         if str(word).lower() in key_words.keys():
-            logging.info(f"extracted the key_word: [bold]{word.lower()}[/bold] from the filename")
+            logging.info(f"extracted the key_word: {word.lower()} from the filename")
             torrent_info[str(word).lower()] = key_words[str(word).lower()]
 
         # Bluray region source
@@ -1926,25 +1926,21 @@ for file in upload_queue:
 
         # -------- Check for Dupes --------
         if os.getenv('check_dupes') == 'true':
-            console.print(f"\nChecking for dupes on [bold]{tracker}[/bold]...", style="chartreuse1")
+            console.print(f"\n\nChecking for dupes on [bold]{tracker}[/bold]...", style="chartreuse1")
             # Call the function that will search each site for dupes and return a similarity percentage, if it exceeds what the user sets in config.env we skip the upload
             dupe_response = search_for_dupes_api(acronym_to_tracker[str(tracker).lower()], torrent_info["imdb"], torrent_info=torrent_info, tracker_api=temp_tracker_api_key)
-            if type(dupe_response) is dict:
-                if dupe_response is not None:
-                    dupe_that_exists_title = str(list(dupe_response.keys())[0])
-                    dupe_that_exists_percentage = str(list(dupe_response.values())[0])
+            # True == dupe_found
+            # False == no_dupes/continue upload
+            if dupe_response:
+                logging.error(f"Could not upload to: {tracker} because we found a dupe onsite")
+                # Send discord notification if enabled
+                if discord_url:
+                    requests.post(url=discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content='f'Dupe check failed, upload to **{str(tracker).upper()}** canceled')
 
-                    logging.error(f"Could not upload to: {tracker} since we found a dupe on site already")
-                    console.print(
-                        f"[red][bold]{dupe_that_exists_title}[/bold][/red] has a similarity percentage of [red][bold]{dupe_that_exists_percentage}%[/bold][/red] (your limit in config.env is [red][bold]{os.getenv('acceptable_similarity_percentage')}%[/bold][/red])",
-                        style="blue", highlight=False)
-                    console.print(" :warning: Dupe Check Failed :warning: ", style="bold red on white")
-                    # Update discord channel
-                    if discord_url:
-                        requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content='f'Dupe check failed: **{dupe_that_exists_title}** is a dupe')
-                    continue
-            else:
-                console.print(f":heavy_check_mark: Yay! No dupes found on [bold]{tracker}[/bold], continuing the upload process now\n")
+                # If dupe was found & the script is auto_mode OR if the user responds with 'n' for the 'dupe found, continue?' prompt
+                #  we will essentially stop the current 'for loops' iteration & jump back to the beginning to start next cycle (if exists else quits)
+                continue
+
 
         # -------- Generate .torrent file --------
         console.print(f'\n[bold]Generating .torrent file for [chartreuse1]{tracker}[/chartreuse1][/bold]')

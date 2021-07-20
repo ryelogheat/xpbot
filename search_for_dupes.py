@@ -1,47 +1,55 @@
-import json
 import os
+import re
+import json
 import logging
 import requests
-from rich.console import Console
-from rich.table import Table
-import re
+from guessit import guessit
 from fuzzywuzzy import fuzz
+from rich.table import Table
+from rich.prompt import Confirm
+from rich.console import Console
+
+
 
 console = Console()
 
 working_folder = os.path.dirname(os.path.realpath(__file__))
 
-logging.basicConfig(filename='{}/upload_script.log'.format(working_folder),
+logging.basicConfig(filename=f'{working_folder}/upload_script.log',
                     level=logging.INFO,
                     format='%(asctime)s | %(name)s | %(levelname)s | %(message)s')
 
 
 def search_for_dupes_api(search_site, imdb, torrent_info, tracker_api):
-    with open(working_folder + "/site_templates/{}.json".format(search_site), "r", encoding="utf-8") as config_file:
+    with open(f'{working_folder}/site_templates/{search_site}.json', "r", encoding="utf-8") as config_file:
+        # with open(working_folder + "/site_templates/{}.json".format(search_site), "r", encoding="utf-8") as config_file:
         config = json.load(config_file)
 
     if str(config["dupes"]["request"]) == "POST":
         # POST request (BHD)
-        url = str(config["torrents_search"]).format(api_key=tracker_api)
-        payload = {'action': 'search', config["translation"]["imdb"]: imdb}
-        response = requests.request("POST", url, data=payload)
-
+        url_dupe_search = str(config["torrents_search"]).format(api_key=tracker_api)
+        url_dupe_payload = {'action': 'search', config["translation"]["imdb"]: imdb}
+        dupe_check_response = requests.post(url=url_dupe_search, data=url_dupe_payload)
     else:
         # GET request (BLU & ACM)
-        url = str(config["dupes"]["url_format"]).format(search_url=str(config["torrents_search"]).format(api_key=tracker_api), imdb=imdb)
-        response = requests.request("GET", url)
+        url_dupe_search = str(config["dupes"]["url_format"]).format(search_url=str(config["torrents_search"]).format(api_key=tracker_api), imdb=imdb[2:])
+        url_dupe_payload = None  # this is here just for the log, its not technically needed
+        dupe_check_response = requests.get(url=url_dupe_search)
 
-    if response.status_code != 200:
-        logging.error(f"{search_site} returned the status code: {response.status_code}")
-        logging.info(f"Dupe check for {search_site} failed, assuming no dupes and continuing upload")
-        return "no_dupes"
+    logging.info(msg=f'Dupe search request | Method: {str(config["dupes"]["request"])} | URL: {url_dupe_search} | Payload: {url_dupe_payload}')
+
+
+    if dupe_check_response.status_code != 200:
+        logging.error(f"{search_site} returned the status code: {dupe_check_response.status_code}")
+        logging.error(f"Dupe check for {search_site} failed, assuming no dupes and continuing upload")
+        return False
 
     # Now that we have the response from tracker(X) we can parse the json and try to identify dupes
-    # print(json.dumps(response.json(), indent=4, sort_keys=True))
+
     existing_release_types = {}  # We first break down the results into very basic categories like "remux", "encode", "web" etc and store the title + results here
+    existing_releases_count = {'bluray_encode': 0, 'bluray_remux': 0, 'webdl': 0, 'webrip': 0, 'hdtv': 0}  # We also log the num each type shows up on site
 
-
-    for item in response.json()[str(config["dupes"]["parse_json"]["top_lvl"])]:
+    for item in dupe_check_response.json()[str(config["dupes"]["parse_json"]["top_lvl"])]:
 
         if "torrent_details" in config["dupes"]["parse_json"]:
             # BLU & ACM have us go 2 "levels" down to get torrent info -->  [data][attributes][name] = torrent title
@@ -52,6 +60,7 @@ def search_for_dupes_api(search_site, imdb, torrent_info, tracker_api):
 
         torrent_title = str(torrent_details["name"])
         torrent_title_split = torrent_title.replace("-", " ").lower().split(' ')
+
 
         # Bluray Encode
         if all(x in torrent_title_split for x in ['bluray']) and any(x in torrent_title_split for x in ['720p', '1080i', '1080p', '2160p']) and any(x in torrent_title_split for x in ['x264', 'x265']):
@@ -78,44 +87,48 @@ def search_for_dupes_api(search_site, imdb, torrent_info, tracker_api):
             existing_release_types[torrent_title] = "dvd"
 
 
-
     # If we are uploading a tv show we should only add the correct season to the existing_release_types dict
     if "s00e00" in torrent_info:
-        if len(torrent_info["s00e00"]) > 3:
-            # This is an episode (since a len of 3 would only leave room for 'S01' not 'S01E01' etc)
-            season = str(torrent_info["s00e00"])[:-3]
-        else:
-            season = str(torrent_info["s00e00"])
-
+        # We just want the season of whatever we are uploading so we can filter the results later (Most API requests include all the seasons/episodes of a tv show in the response, we don't need all of them)
+        season = str(torrent_info["s00e00"])[:-3] if len(torrent_info["s00e00"]) > 3 else str(torrent_info["s00e00"])
 
         for existing_release_types_key in list(existing_release_types.keys()):
-            if season not in existing_release_types_key:
-                del existing_release_types[existing_release_types_key]
+            if season not in existing_release_types_key:  # filter our wrong seasons
+                existing_release_types.pop(existing_release_types_key)
 
 
+    # This just updates a dict with the number of a particular "type" of release exists on site (e.g. "2 bluray_encodes" or "1 bluray_remux" etc)
+    for onsite_quality_type in existing_release_types.values():
+        existing_releases_count[onsite_quality_type] += 1
+    logging.info(msg=f'Results from initial dupe query (all resolution): {existing_releases_count}')
 
-
-
-        # TODO add support for "editions", copy regex from auto_upload script. If any custom edition is found and it does not appear in any of the releases on site, we can consider it OK to upload
-
-    unique_release_types = set(existing_release_types.values())
-    for release_type in unique_release_types:
-        # console.print("{}:".format(release_type), style="bold magenta")
-        num_of_existing_releases = 0
-        for key, val in existing_release_types.items():
-            if release_type == val:
-                num_of_existing_releases += 1
-        #         print("{}".format(key))
-        # console.print("{}\n".format(num_of_existing_releases), style="bold red")
-
-    # print("\n\n")
-    # print(existing_release_types.keys())
 
     # If we get no matches when searching via IMDB ID that means this content hasn't been upload in any format, no possibility for dupes
     if len(existing_release_types.keys()) == 0:
-        return "no_dupes"
+        logging.info(msg='Dupe query did not return any releases that we could parse, assuming no dupes exist.')
+        return False
 
-    # print("test\n\n")
+
+
+    # --------------- Filter the existing_release_types dict to only include correct res & source_type --------------- #
+    for their_title in list(existing_release_types.keys()):  # we wrap the dict keys in a "list()" so we can modify (pop) keys from it while the loop is running below
+        # use guessit to get details about the release
+        their_title_guessit = guessit(their_title)
+        their_title_type = existing_release_types[their_title]
+
+        # This next if statement does 2 things:
+        #   1. If the torrent title from the API request doesn't have the same resolution as the file being uploaded we pop (remove) it from the dict "existing_release_types"
+        #   2. If the API torrent title source type (e.g. bluray_encode) is not the same as the local file then we again pop it from the "existing_release_types" dict
+        if ("screen_size" not in their_title_guessit or their_title_guessit["screen_size"] != torrent_info["screen_size"]) or their_title_type != torrent_info["source_type"]:
+            existing_releases_count[their_title_type] -= 1
+            existing_release_types.pop(their_title)
+
+    logging.info(msg=f'After applying resolution & "source_type" filter: {existing_releases_count}')
+
+
+
+
+
 
 
     def fuzzy_similarity(our_title, check_against_title):
@@ -154,12 +167,15 @@ def search_for_dupes_api(search_site, imdb, torrent_info, tracker_api):
         token_set_ratio = fuzz.token_set_ratio(our_title.replace(content_title, ''), check_against_title.replace(content_title, ''))
         logging.info(f"'{check_against_title_original}' was flagged with a {str(token_set_ratio)}% dupe probability")
 
+
+        return token_set_ratio
         # Instead of wasting time trying to create a 'low, medium, high' risk system we just have the user enter in a percentage they are comfortable with
         # if a torrent titles vs local title similarity percentage exceeds a limit the user set we immediately quit trying to upload to that site
         # since what the user considers (via token_set_ratio percentage) to be a dupe exists
-        if token_set_ratio >= int(os.getenv('acceptable_similarity_percentage')):
-            # When we return this dict we pass it back into auto_upload.py to show the user the torrent on site that triggered the dupe fail & its percentage
-            return {check_against_title_original: token_set_ratio}
+        # if token_set_ratio >= int(os.getenv('acceptable_similarity_percentage')):
+        #     # When we return this dict we pass it back into auto_upload.py to show the user the torrent on site that triggered the dupe fail & its percentage
+        #     # bool(token_set_ratio >= int(os.getenv('acceptable_similarity_percentage')))
+        #     return token_set_ratio
 
 
         # 94% (BLU) =  (bluray dts hd ma 5 1 avc remux tdd)
@@ -168,20 +184,49 @@ def search_for_dupes_api(search_site, imdb, torrent_info, tracker_api):
         # 94% (BHD) =  (bluray dts hd ma 5 1 avc remux tdd)
         #         (bluray dts hd ma 5 1 avc remux framestor)
 
-    possible_dupes = Table(show_header=True, header_style="bold cyan")
-    possible_dupes.add_column(f"Possible Dupes ({str(config['source']).upper()})", justify="center")
 
 
-    for i in ['bluray_disc', 'bluray_remux', 'bluray_encode', 'webdl', 'webrip', 'dvd', 'hdtv']:
-        if i in torrent_info["source_type"]:
-            # console.print("Possible dupes:", style="bold magenta")
-            for key, val in existing_release_types.items():
-                if val == i and torrent_info["screen_size"] in key:
-                    # if torrent_info["screen_size"] in key:
-                    possible_dupes.add_row(f"{key}")
 
-                    # If we get a match then run further checks
-                    dupe_dict_return = fuzzy_similarity(our_title=torrent_info["torrent_title"], check_against_title=key)
-                    if dupe_dict_return is not None:  # Not every loop will end up adding a "dupe" to this dict so we make sure its not empty first
-                        logging.error(f"{str(list(dupe_dict_return.values())[0])}% is higher then the maximum similarity percentage ({os.getenv('acceptable_similarity_percentage')}%) allowed by the user ")
-                        return dupe_dict_return
+
+
+    possible_dupes_table = Table(show_header=True, header_style="bold cyan")
+    possible_dupes_table.add_column(f"Exceeds Max % ({os.getenv('acceptable_similarity_percentage')}%)", justify="left")
+    possible_dupes_table.add_column(f"Possible Dupes ({str(config['source']).upper()})", justify="left")
+    possible_dupes_table.add_column("Similarity %", justify="center")
+
+
+    possible_dupe_with_percentage_dict = {}
+    max_dupe_percentage_exceeded = False
+
+    for possible_dupe_title in existing_release_types.keys():
+        # If we get a match then run further checks
+        possible_dupe_with_percentage_dict[possible_dupe_title] = fuzzy_similarity(our_title=torrent_info["torrent_title"], check_against_title=possible_dupe_title)
+
+
+    for possible_dupe in sorted(possible_dupe_with_percentage_dict, key=possible_dupe_with_percentage_dict.get, reverse=True):
+        mark_as_dupe = bool(possible_dupe_with_percentage_dict[possible_dupe] >= int(os.getenv('acceptable_similarity_percentage')))
+        mark_as_dupe_color = "bright_red" if mark_as_dupe else "dodger_blue1"
+        mark_as_dupe_percentage_difference_raw_num = possible_dupe_with_percentage_dict[possible_dupe] - int(os.getenv('acceptable_similarity_percentage'))
+        mark_as_dupe_percentage_difference = f'{"+" if mark_as_dupe_percentage_difference_raw_num >= 0 else "-"}{abs(mark_as_dupe_percentage_difference_raw_num)}%'
+
+        possible_dupes_table.add_row(f'[{mark_as_dupe_color}]{mark_as_dupe}[/{mark_as_dupe_color}] ({mark_as_dupe_percentage_difference})', possible_dupe, f'{str(possible_dupe_with_percentage_dict[possible_dupe])}%')
+
+
+        # because we want to show the user every possible dupe (not just the ones that exceed the max percentage) we just mark an outside var True & finish the for loop that adds the table rows
+        if not max_dupe_percentage_exceeded:
+            max_dupe_percentage_exceeded = mark_as_dupe
+
+
+    if max_dupe_percentage_exceeded:
+        console.print(f"\n[bold red on white] :warning: Detected possible dupe! :warning: [/bold red on white]")
+        console.print(possible_dupes_table)
+        return not bool(Confirm.ask("\nContinue upload even with possible dupe?"))
+    else:
+        console.print(f":heavy_check_mark: Yay! No dupes found on [bold]{str(config['source']).upper()}[/bold], continuing the upload process now\n")
+        return False
+
+
+
+
+
+
