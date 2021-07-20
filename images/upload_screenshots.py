@@ -47,89 +47,69 @@ def upload_screens(img_host, api_key, working_folder, torrent_title):
     # Both imgbb & freeimage are based on Chevereto which the API has us upload 1 image at a time while imgbox uses something custom and we upload a list of images at the same time
     # So if we try and upload to imgbox for every 1 image we end up uploading num_of_screenshots^2 which results in a ton of dupes & temp ban
 
-    if img_host in ('imgbb', 'freeimage'):
-        for img in track(glob.glob("{}*.png".format(working_folder + "/images/screenshots/")), description="Uploading..."):
+    for img in track(glob.glob(f"{working_folder}/images/screenshots/*.png"), description="Uploading..."):
 
-            data = {
-                'key': api_key,
-                'image': base64.b64encode(open(img, "rb").read())  # skipcq: PTC-W0010
-            }
+        if img_host == 'ptpimg':
 
-            if img_host == "imgbb":
-                url = "https://api.imgbb.com/1/upload"
+            try:
+                import ptpimg_uploader
+                ptp_img_upload = ptpimg_uploader.upload(api_key=os.getenv('ptpimg_api_key'), files_or_urls=[img], timeout=20)
+                # Make sure the response we get from ptpimg is a list
+                assert type(ptp_img_upload) == list
+                # assuming it is, we can then get the img url & add it to the 'thumbs_links_dict' dict
+                ptp_uploaded_img_link = ptp_img_upload[0]
+                # Pretty sure ptpimg doesn't compress/host multiple 'versions' of the same image so we use the direct image link for both parts of the bbcode (url & img)
+                thumbs_links_dict[ptp_uploaded_img_link] = ptp_uploaded_img_link
 
-                try:
-                    response_test = requests.post(url, data=data)
-                    if response_test.ok:
-                        response = response_test.json()
-                    else:
+            except ImportError:
+                logging.error(msg='cant upload to ptpimg without this pip package: https://pypi.org/project/ptpimg-uploader/')
+                console.print(f"\nInstall required pip package: [bold]ptpimg_uploader[/bold] to enable ptpimg uploads\n", style='Red', highlight=False)
+                return "failed"
+            except AssertionError:
+                logging.error(msg='ptpimg uploaded an image but returned something unexpected (should be a list)')
+                console.print(f"\nUnexpected response from ptpimg upload (should be a list). No image link found\n", style='Red', highlight=False)
+                return "failed"
+            except Exception:
+                logging.error(msg='ptpimg upload failed, double check the ptpimg API Key & try again.')
+                console.print(f"\nptpimg upload failed. double check the [bold]ptpimg_api_key[/bold] in [bold]config.env[/bold]\n", style='Red', highlight=False)
+                return "failed"
+
+
+
+        if img_host in ('imgbb', 'freeimage'):
+
+            # Get the correct image host url/json key
+            available_image_host_urls = {'imgbb': 'https://api.imgbb.com/1/upload', 'freeimage': 'https://freeimage.host/api/1/upload'}
+            parent_key = 'data' if img_host == 'imgbb' else 'image'
+
+            # Load the img_host_url, api key & img encoded in base64 into a dict called 'data' & post it
+            image_host_url = available_image_host_urls[img_host]
+            data = {'key': api_key, 'image': base64.b64encode(open(img, "rb").read())}
+
+
+            try:
+                img_upload_request = requests.post(url=image_host_url, data=data)
+                if img_upload_request.ok:
+                    img_upload_response = img_upload_request.json()
+                    print(img_upload_response)
+                    # When you upload an image you get a few links back, you get 'medium', 'thumbnail', 'url', 'url_viewer' and we only need max 2 so we set the order/list to try and get the ones we want
+                    possible_image_types = ['medium', 'thumb']
+                    try:
+                        for img_type in possible_image_types:
+                            if img_type in img_upload_response[parent_key]:
+                                thumbs_links_dict[img_upload_response[parent_key][img_type]["url"]] = img_upload_response[parent_key]['url_viewer']
+                                break
+                            else:
+                                thumbs_links_dict[img_upload_response[parent_key]["url"]] = img_upload_response[parent_key]['url_viewer']
+                    except KeyError:
                         return "failed"
-                except requests.exceptions.RequestException:
-                    logging.error("Failed to upload {file_in_question} to {host_in_question}".format(file_in_question=img, host_in_question=img_host))
-                    console.print(f"upload to [bold]{img_host}[/bold] has failed!", style="Red")
+                else:
                     return "failed"
+            except requests.exceptions.RequestException:
+                logging.error(f"Failed to upload {img} to {img_host}")
+                console.print(f"upload to [bold]{img_host}[/bold] has failed!", style="Red")
+                return "failed"
 
-                # Save the thumb and full page links into a dict
-                try:
-                    if "medium" in response["data"]:
-                        thumbs_links_dict[response["data"]["medium"]["url"]] = response['data']['url_viewer']
-                    elif "thumb" in response["data"]:
-                        thumbs_links_dict[response["data"]["thumb"]["url"]] = response['data']['url_viewer']
-                    else:
-                        thumbs_links_dict[response["data"]["url"]] = response['data']['url_viewer']
-                except KeyError:
-                    return "failed"
-
-
-
-            if img_host == "freeimage":
-                url = "https://freeimage.host/api/1/upload"
-
-                try:
-                    response_test = requests.post(url, data=data)
-                    if response_test.ok:
-                        response = response_test.json()
-                    else:
-                        return "failed"
-                except requests.exceptions.RequestException:
-                    logging.error("Failed to upload {file_in_question} to {host_in_question}".format(file_in_question=img, host_in_question=img_host))
-                    console.print(f"upload to [bold]{img_host}[/bold] has failed!", style="Red")
-                    return "failed"
-
-                # Save the thumb and full page links into a dict
-                try:
-                    if "medium" in response["image"]:
-                        thumbs_links_dict[response["image"]["medium"]["url"]] = response['image']['url_viewer']
-                    elif "thumb" in response["image"]:
-                        thumbs_links_dict[response["image"]["thumb"]["url"]] = response['image']['url_viewer']
-                    else:
-                        thumbs_links_dict[response["image"]["url"]] = response['image']['url_viewer']
-                except KeyError:
-                    return "failed"
-
-
-
-            # ------- Revoked default API key & not possible to get new key ------- #
-            # --------------------------------------------------------------------- #
-            # if img_host == "imgyukle":
-            #     # We just replace the dict key "image" to "source" which is what imgyukle requires
-            #     data["source"] = data.pop("image")
-            #
-            #     url = "https://imgyukle.com/api/1/upload"
-            #     try:
-            #         response_test = requests.post(url, data=data)
-            #         if response_test.ok:
-            #             response = response_test.json()
-            #         else:
-            #             return "failed"
-            #     except requests.exceptions.RequestException:
-            #         logging.error("Failed to upload {file_in_question} to {host_in_question}".format(file_in_question=img, host_in_question=img_host))
-            #         console.print(f"upload to [bold]{img_host}[/bold] has failed!", style="Red")
-            #         return "failed"
-            #     try:
-            #         thumbs_links_dict[response['image']['medium']['url']] = response['image']['url_viewer']
-            #     except KeyError:
-            #         return "failed"
 
 
     # Instead of coding our own solution we'll use the awesome project https://github.com/plotski/pyimgbox to upload to imgbox
@@ -201,11 +181,12 @@ def take_upload_screens(duration, upload_media_import, torrent_title_import, bas
 
     # Verify that at least 1 image host is enabled so we don't waste time taking unneeded screenshots
     upload_to_host_dict = {}
-    for host in range(1, 4):  # current number of image hosts available (3)
-        if len(os.getenv('img_host_{}'.format(host))) != 0:
-            if len(os.getenv('{host_site}_api_key'.format(host_site=os.getenv('img_host_{}'.format(host))))) == 0:
-                console.print(f"Can't upload to '{os.getenv('img_host_{}'.format(host))}' without an API key", style='Red', highlight=False)
-                logging.error("Can't upload to '{}' without an API key".format(os.getenv('img_host_{}'.format(host))))
+    for host in range(1, 5):  # current number of image hosts available (4)
+        if len(os.getenv(f'img_host_{host}')) != 0:
+            if len(os.getenv(f"{os.getenv(f'img_host_{host}')}_api_key")) == 0:
+
+                console.print(f"Can't upload to [bold]{os.getenv(f'img_host_{host}')}[/bold] without an API key", style='Red', highlight=False)
+                logging.error(f"Can't upload to {os.getenv(f'img_host_{host}')} without an API key")
             else:
                 # Save the site & api key to upload_to_host_dict
                 upload_to_host_dict[os.getenv('img_host_{}'.format(host))] = os.getenv('{host_site}_api_key'.format(host_site=os.getenv('img_host_{}'.format(host))))
