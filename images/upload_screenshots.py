@@ -91,7 +91,6 @@ def upload_screens(img_host, api_key, working_folder, torrent_title):
                 img_upload_request = requests.post(url=image_host_url, data=data)
                 if img_upload_request.ok:
                     img_upload_response = img_upload_request.json()
-                    print(img_upload_response)
                     # When you upload an image you get a few links back, you get 'medium', 'thumbnail', 'url', 'url_viewer' and we only need max 2 so we set the order/list to try and get the ones we want
                     possible_image_types = ['medium', 'thumb']
                     try:
