@@ -130,14 +130,15 @@
 
 
   "dupes": {
-    "request": "POST",
-    "keys": {
-      "action": "search",
-      "imdb_id": "string"
-    },
+
+    "request": "GET",
+    "url_format": "{search_url}&imdbId={imdb}",
+
     "parse_json": {
-      "top_lvl": "results"
+      "top_lvl": "data",
+      "torrent_details": "attributes"
     },
+
     "different_cuts": "100",
     "2160p_remux": 1,
     "2160p_encode": 1,

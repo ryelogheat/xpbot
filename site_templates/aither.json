@@ -137,7 +137,7 @@
 
   "dupes": {
     "request": "GET",
-    "url_format": "{search_url}&imdb={imdb}",
+    "url_format": "{search_url}&imdbId={imdb}",
 
     "parse_json": {
       "top_lvl": "data",
