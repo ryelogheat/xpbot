@@ -3,6 +3,7 @@ import re
 import json
 import logging
 import requests
+from distutils import util
 from guessit import guessit
 from fuzzywuzzy import fuzz
 from rich.table import Table
@@ -126,11 +127,6 @@ def search_for_dupes_api(search_site, imdb, torrent_info, tracker_api):
     logging.info(msg=f'After applying resolution & "source_type" filter: {existing_releases_count}')
 
 
-
-
-
-
-
     def fuzzy_similarity(our_title, check_against_title):
         check_against_title_original = check_against_title
         # We will remove things like the title & year from the comparison stings since we know they will be exact matches anyways
@@ -138,9 +134,7 @@ def search_for_dupes_api(search_site, imdb, torrent_info, tracker_api):
         # replace DD+ with DDP from both our title and tracker results title to make the dupe check a bit more accurate since some sites like to use DD+ and others DDP but they refer to the same thing
         our_title = re.sub(r'dd\+', 'ddp', str(our_title).lower())
         check_against_title = re.sub(r'dd\+', 'ddp', str(check_against_title).lower())
-
         content_title = re.sub('[^0-9a-zA-Z]+', ' ', str(torrent_info["title"]).lower())
-        # content_title = " ".join(content_title.split())
 
         if "year" in torrent_info:
             # Also remove the year because that *should* be an exact match, that's not relevant to detecting changes
@@ -157,36 +151,17 @@ def search_for_dupes_api(search_site, imdb, torrent_info, tracker_api):
         our_title = re.sub(r'[^A-Za-z0-9 ]+', ' ', str(our_title)).lower().replace(torrent_info["screen_size"], "").replace(check_against_title_year, "")
         our_title = " ".join(our_title.split())
 
-        # check_against_title = str(check_against_title).replace(torrent_info["resolution"], "").replace(check_against_title_year, "").replace(content_title, "")
         check_against_title = re.sub(r'[^A-Za-z0-9 ]+', ' ', str(check_against_title)).lower().replace(torrent_info["screen_size"], "").replace(check_against_title_year, "")
         check_against_title = " ".join(check_against_title.split())
-
-        # print("Our Title:        {}".format(our_title.replace(content_title, '')))
-        # print("Check Against:    {}".format(check_against_title.replace(content_title, '')))
 
         token_set_ratio = fuzz.token_set_ratio(our_title.replace(content_title, ''), check_against_title.replace(content_title, ''))
         logging.info(f"'{check_against_title_original}' was flagged with a {str(token_set_ratio)}% dupe probability")
 
 
-        return token_set_ratio
         # Instead of wasting time trying to create a 'low, medium, high' risk system we just have the user enter in a percentage they are comfortable with
         # if a torrent titles vs local title similarity percentage exceeds a limit the user set we immediately quit trying to upload to that site
         # since what the user considers (via token_set_ratio percentage) to be a dupe exists
-        # if token_set_ratio >= int(os.getenv('acceptable_similarity_percentage')):
-        #     # When we return this dict we pass it back into auto_upload.py to show the user the torrent on site that triggered the dupe fail & its percentage
-        #     # bool(token_set_ratio >= int(os.getenv('acceptable_similarity_percentage')))
-        #     return token_set_ratio
-
-
-        # 94% (BLU) =  (bluray dts hd ma 5 1 avc remux tdd)
-        #              (bluray remux avc dts hd ma 5 1 pmp)
-
-        # 94% (BHD) =  (bluray dts hd ma 5 1 avc remux tdd)
-        #         (bluray dts hd ma 5 1 avc remux framestor)
-
-
-
-
+        return token_set_ratio
 
 
     possible_dupes_table = Table(show_header=True, header_style="bold cyan")
@@ -220,13 +195,7 @@ def search_for_dupes_api(search_site, imdb, torrent_info, tracker_api):
     if max_dupe_percentage_exceeded:
         console.print(f"\n[bold red on white] :warning: Detected possible dupe! :warning: [/bold red on white]")
         console.print(possible_dupes_table)
-        return not bool(Confirm.ask("\nContinue upload even with possible dupe?"))
+        return True if bool(util.strtobool(os.getenv('auto_mode'))) else not bool(Confirm.ask("\nContinue upload even with possible dupe?"))
     else:
         console.print(f":heavy_check_mark: Yay! No dupes found on [bold]{str(config['source']).upper()}[/bold], continuing the upload process now\n")
         return False
-
-
-
-
-
-
