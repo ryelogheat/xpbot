@@ -88,15 +88,6 @@ def search_for_dupes_api(search_site, imdb, torrent_info, tracker_api):
             existing_release_types[torrent_title] = "dvd"
 
 
-    # If we are uploading a tv show we should only add the correct season to the existing_release_types dict
-    if "s00e00" in torrent_info:
-        # We just want the season of whatever we are uploading so we can filter the results later (Most API requests include all the seasons/episodes of a tv show in the response, we don't need all of them)
-        season = str(torrent_info["s00e00"])[:-3] if len(torrent_info["s00e00"]) > 3 else str(torrent_info["s00e00"])
-
-        for existing_release_types_key in list(existing_release_types.keys()):
-            if season not in existing_release_types_key:  # filter our wrong seasons
-                existing_release_types.pop(existing_release_types_key)
-
 
     # This just updates a dict with the number of a particular "type" of release exists on site (e.g. "2 bluray_encodes" or "1 bluray_remux" etc)
     for onsite_quality_type in existing_release_types.values():
@@ -104,11 +95,11 @@ def search_for_dupes_api(search_site, imdb, torrent_info, tracker_api):
     logging.info(msg=f'Results from initial dupe query (all resolution): {existing_releases_count}')
 
 
+
     # If we get no matches when searching via IMDB ID that means this content hasn't been upload in any format, no possibility for dupes
     if len(existing_release_types.keys()) == 0:
         logging.info(msg='Dupe query did not return any releases that we could parse, assuming no dupes exist.')
         return False
-
 
 
     # --------------- Filter the existing_release_types dict to only include correct res & source_type --------------- #
@@ -125,6 +116,75 @@ def search_for_dupes_api(search_site, imdb, torrent_info, tracker_api):
             existing_release_types.pop(their_title)
 
     logging.info(msg=f'After applying resolution & "source_type" filter: {existing_releases_count}')
+
+
+
+    # Movies (mostly blurays) are usually a bit more flexible with dupe/trump rules due to editions, regions, etc
+    # TV Shows (mostly web) are usually only allowed 1 "version" onsite & we also need to consider individual episode uploads when a season pack exists etc
+    # for those reasons ^^ we place this dict here that we will use to generate the Table we show the user of possible dupes
+    possible_dupe_with_percentage_dict = {}  # By keeping it out of the fuzzy_similarity() func/loop we are able to directly insert/modify data into it when dealing with tv show dupes/trumps below
+
+    # If we are uploading a tv show we should only add the correct season to the existing_release_types dict
+    if "s00e00" in torrent_info:
+        # First check if what the user is uploading is a full season or not
+        is_full_season = bool(len(torrent_info["s00e00"]) == 3)
+
+        # We just want the season of whatever we are uploading so we can filter the results later (Most API requests include all the seasons/episodes of a tv show in the response, we don't need all of them)
+        season_num = torrent_info["s00e00"] if is_full_season else str(torrent_info["s00e00"])[:-3]
+        episode_num = str(torrent_info["s00e00"])[3:]
+        logging.info(msg=f'Filtering out results that are not from the same season being uploaded ({season_num})')
+
+        # Loop through the results & discard everything that is not from the correct season
+        number_of_discarded_seasons = 0
+        for existing_release_types_key in list(existing_release_types.keys()):
+
+            if season_num not in existing_release_types_key:  # filter our wrong seasons
+                existing_release_types.pop(existing_release_types_key)
+                number_of_discarded_seasons += 1
+                continue
+
+
+            # at this point we've filtered out all the different resolutions/types/seasons
+            #  so now we check each remaining title to see if its a season pack or individual episode
+            extracted_season_episode_from_title = list(filter(lambda x: x.startswith(season_num), existing_release_types_key.split(" ")))[0]
+            if len(extracted_season_episode_from_title) == 3:
+                logging.info(msg=f'Found a season pack for {season_num} on {search_site}')
+                # TODO maybe mark the season pack as a 100% dupe or consider expanding dupe Table to allow for error messages to inform the user
+
+
+                # If a full season pack is onsite then in almost all cases individual episodes from that season are not allowed to be uploaded anymore
+                #   check to see if that's ^^ happening, if it is then we will log it and if 'auto_mode' is enabled we also cancel the upload
+                #   if 'auto_mode=false' then we prompt the user & let them decide
+                if not is_full_season:
+
+
+                    if bool(util.strtobool(os.getenv('auto_mode'))):
+                        # possible_dupe_with_percentage_dict[existing_release_types_key] = 100
+                        logging.critical(msg=f'Canceling upload to {search_site} because uploading a full season pack is already available: {existing_release_types_key}')
+                        return True
+
+
+                    # if this is an interactive upload then we can prompt the user & let them choose if they want to cancel or continue the upload
+                    logging.error(msg="Almost all trackers don't allow individual episodes to be uploaded after season pack is released")
+                    console.print(f"\n[bold red on white] :warning: Need user input! :warning: [/bold red on white]")
+                    console.print(f"You're trying to upload an [bold red]Individual Episode[/bold red] [bold]({torrent_info['title']} {torrent_info['s00e00']})[/bold] to {search_site}",  highlight=False)
+                    console.print(f"A [bold red]Season Pack[/bold red] is already available: {existing_release_types_key}", highlight=False)
+                    console.print("Most sites [bold red]don't allow[/bold red] individual episode uploads when the season pack is available")
+                    console.print('---------------------------------------------------------')
+                    if not bool(Confirm.ask("Ignore and continue upload?", default=False)):
+                        return True
+
+
+            # now we just need to make sure the episode we're trying to upload is not already on site
+            number_of_discarded_episodes = 0
+            if extracted_season_episode_from_title != torrent_info['s00e00']:
+                number_of_discarded_episodes += 1
+                existing_release_types.pop(existing_release_types_key)
+
+            logging.info(msg=f'Filtered out: {number_of_discarded_episodes} results for having different episode numbers (looking for {episode_num})')
+
+
+        logging.info(msg=f'Filtered out: {number_of_discarded_seasons} results for not being the right season ({season_num})')
 
 
     def fuzzy_similarity(our_title, check_against_title):
@@ -170,7 +230,6 @@ def search_for_dupes_api(search_site, imdb, torrent_info, tracker_api):
     possible_dupes_table.add_column("Similarity %", justify="center")
 
 
-    possible_dupe_with_percentage_dict = {}
     max_dupe_percentage_exceeded = False
 
     for possible_dupe_title in existing_release_types.keys():
@@ -193,7 +252,7 @@ def search_for_dupes_api(search_site, imdb, torrent_info, tracker_api):
 
 
     if max_dupe_percentage_exceeded:
-        console.print(f"\n[bold red on white] :warning: Detected possible dupe! :warning: [/bold red on white]")
+        console.print(f"\n\n[bold red on white] :warning: Detected possible dupe! :warning: [/bold red on white]")
         console.print(possible_dupes_table)
         return True if bool(util.strtobool(os.getenv('auto_mode'))) else not bool(Confirm.ask("\nContinue upload even with possible dupe?"))
     else:
