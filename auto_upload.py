@@ -139,6 +139,10 @@ def delete_leftover_files():
 
 
 def identify_type_and_basic_info(full_path):
+    console.line(count=2)
+    console.rule(f"Analyzing & Identifying Video", style='red', align='center')
+    console.line(count=1)
+
     # guessit is typically pretty good at getting the title, year, resolution, group extracted
     # but we need to do some more work for things like audio channels, codecs, etc (Some groups (D-Z0N3 is a pretty big offender here)
     # for example 'D-Z0N3' used to not include the audio channels in their filename so we need to use ffprobe to get that ourselves (pymediainfo has issues when dealing with atmos and more complex codecs)
@@ -309,14 +313,14 @@ def identify_type_and_basic_info(full_path):
     # For audio it will insert "Dolby Digital Plus" into the dict when what we want is "DD+"
 
     analyze_to_identify = ['video_codec', 'audio_codec', 'mediainfo']
-    console.print(f"\nAnalyzing the video file to try and extract the [bold][green]{analyze_to_identify}[/green][/bold]...\n", highlight=False)
+    # console.print(f"\nAnalyzing the video file to try and extract the [bold][green]{analyze_to_identify}[/green][/bold]...\n", highlight=False)
 
     # ------------ If we are missing any other "basic info" we try to identify it here ------------ #
     if len(keys_we_need_but_missing_torrent_info) != 0:
         logging.error("Unable to automatically extract all the required info from the filename")
         logging.error(f"We are missing this info: {keys_we_need_but_missing_torrent_info}")
         # Show the user what is missing & the next steps
-        console.print(f"\n[bold red underline]Unable to automatically detect the following info in the filename:[/bold red underline] [green]{keys_we_need_but_missing_torrent_info}[/green]")
+        console.print(f"[bold red underline]Unable to automatically detect the following info in the filename:[/bold red underline] [green]{keys_we_need_but_missing_torrent_info}[/green]")
 
     # We do some extra processing for the audio & video codecs since they are pretty important for the upload process & accuracy so they get appended each time
     for identify_me in ['video_codec', 'audio_codec', 'mediainfo']:
@@ -328,19 +332,36 @@ def identify_type_and_basic_info(full_path):
         # Save the analyze_video_file() return result into the 'torrent_info' dict
         torrent_info[missing_val] = analyze_video_file(missing_value=missing_val)
 
-    # Show the user what we identified
-    codec_result_table = Table(title="[bold][#F660AB]Media info[/bold][/#F660AB]", box=box.MINIMAL)
-    for x in ["Content type", "Source", "Resolution", "Video codec", "Audio codec", "Channels"]:
-        codec_result_table.add_column(f"{x}", justify='center', style='#38ACEC')
-    # add the actual data now
-    codec_result_table.add_row(
-        torrent_info["type"], torrent_info["source"], torrent_info["screen_size"],
-        torrent_info["video_codec"], torrent_info["audio_codec"], torrent_info["audio_channels"]
-    )
 
-    console.print('\n')
-    console.print(codec_result_table)
-    console.print('\n')
+    # Show the user what we identified so far
+    columns_we_want = {
+        'type': 'Type', 'title': 'Title',
+        's00e00': f'{("Season" if len(torrent_info["s00e00"]) == 3 else "Episode") if "s00e00" in torrent_info else ""}',
+        'year': f'{"Year" if "year" in torrent_info and torrent_info["type"] == "movie" else ""}',
+        'source': 'Source', 'screen_size': 'Resolution', 'video_codec': 'Video codec',
+        'audio_codec': 'Audio codec', 'audio_channels': 'Channels',
+        'release_group': f'{"Group" if "release_group" in torrent_info else None}'
+    }
+    presentable_type = 'Movie' if torrent_info["type"] == 'movie' else 'TV Show'
+
+    codec_result_table = Table(box=box.SQUARE, title='Basic media summery', title_style='bold #be58bf')
+
+    for column_display_value in columns_we_want.values():
+        if len(column_display_value) != 0:
+            codec_result_table.add_column(f"{column_display_value}", justify='center', style='#38ACEC')
+
+    basic_info = []
+    # add the actual data now
+    for column_query_key, column_display_value in columns_we_want.items():
+        if len(column_display_value) != 0:
+            torrent_info_key_failsafe = (torrent_info[column_query_key] if column_query_key != 'type' else presentable_type) if column_query_key in torrent_info else None
+            basic_info.append(torrent_info_key_failsafe)
+
+    codec_result_table.add_row(basic_info[0], basic_info[1], basic_info[2], basic_info[3], basic_info[4], basic_info[5], basic_info[6], basic_info[7], basic_info[8])
+
+    console.line(count=2)
+    console.print(codec_result_table, justify='center')
+    console.line(count=1)
 
 
 def analyze_video_file(missing_value):
@@ -550,13 +571,13 @@ def analyze_video_file(missing_value):
 
         # -- ! This runs if auto_mode == true !
         # We could technically upload without the audio channels in the filename, check to see what the user wants
-        if str(os.getenv('auto_mode_force')).lower() == 'true':  # This means we will still force an upload without the audio_channels
-            logging.info("auto_mode_force=true so we'll upload without the audio_channels in the filename")
+        if str(os.getenv('force_auto_upload')).lower() == 'true':  # This means we will still force an upload without the audio_channels
+            logging.info("force_auto_upload=true so we'll upload without the audio_channels in the filename")
             return ""
 
         # Well shit, if nothing above returned any value then it looks like this is the end of our journey :(
         # Exit the script now
-        quit_log_reason(reason="Audio_Channels are not in the filename, and we can't extract it using regex or ffprobe. auto_mode_force=false so we quit now")
+        quit_log_reason(reason="Audio_Channels are not in the filename, and we can't extract it using regex or ffprobe. force_auto_upload=false so we quit now")
 
     # ---------------- Audio Codec ---------------- #
     if missing_value == "audio_codec":
@@ -656,13 +677,13 @@ def analyze_video_file(missing_value):
 
         # -- ! This runs if auto_mode == true !
         # We could technically upload without the audio codec in the filename, check to see what the user wants
-        if str(os.getenv('auto_mode_force')).lower() == 'true':  # This means we will still force an upload without the audio_codec
-            logging.info("auto_mode_force=true so we'll upload without the audio_codec in the torrent title")
+        if str(os.getenv('force_auto_upload')).lower() == 'true':  # This means we will still force an upload without the audio_codec
+            logging.info("force_auto_upload=true so we'll upload without the audio_codec in the torrent title")
             return ""
 
         # Well shit, if nothing above returned any value then it looks like this is the end of our journey :(
         # Exit the script now
-        quit_log_reason(reason="Could not detect audio_codec via regex, pymediainfo, & ffprobe. auto_mode_force=false so we quit now")
+        quit_log_reason(reason="Could not detect audio_codec via regex, pymediainfo, & ffprobe. force_auto_upload=false so we quit now")
 
     # ---------------- Video Codec ---------------- #
     # I'm pretty confident that a video_codec will be selected automatically each time, unless mediainfo fails catastrophically we should always
@@ -892,6 +913,9 @@ def identify_miscellaneous_details():
 
 
 def search_tmdb_for_id(query_title, year, content_type):
+    console.line(count=2)
+    console.rule(f"TMDB Search Results", style='red', align='center')
+    console.line(count=1)
     if content_type == "episode":  # translation for TMDB API
         content_type = "tv"
 
@@ -914,8 +938,7 @@ def search_tmdb_for_id(query_title, year, content_type):
                 "No results found on TMDB using the title '{}' and the year '{}'".format(query_title, year))
             sys.exit("No results found on TMDB, try running this script again but manually supply the tmdb or imdb ID")
 
-        tmdb_search_results = Table(title="\n\n\n[bold][blue]TMDB Search Results[/bold][/blue]", show_header=True,
-                                    header_style="bold cyan", box=box.HEAVY, border_style="dim")
+        tmdb_search_results = Table(show_header=True, header_style="bold cyan", box=box.HEAVY, border_style="dim")
         tmdb_search_results.add_column("Result #", justify="center")
         tmdb_search_results.add_column("Title", justify="center")
         tmdb_search_results.add_column("TMDB URL", justify="center")
@@ -1831,7 +1854,10 @@ for file in upload_queue:
 
         # -------- Check for Dupes --------
         if os.getenv('check_dupes') == 'true':
-            console.print(f"\n\nChecking for dupes on [bold]{tracker}[/bold]...", style="chartreuse1")
+            # console.print(f"\n\nChecking for dupes on [bold]{tracker}[/bold]...", style="chartreuse1")
+            console.print('\n\n')
+            console.rule(f"Dupe Check [bold]({tracker})[/bold]", style='red', align='center')
+
             # Call the function that will search each site for dupes and return a similarity percentage, if it exceeds what the user sets in config.env we skip the upload
             dupe_response = search_for_dupes_api(acronym_to_tracker[str(tracker).lower()], torrent_info["imdb"], torrent_info=torrent_info, tracker_api=temp_tracker_api_key)
             # True == dupe_found
