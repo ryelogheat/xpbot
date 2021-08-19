@@ -56,9 +56,11 @@ logging.basicConfig(filename='{}/upload_script.log'.format(working_folder),
 load_dotenv(f'{working_folder}/config.env')
 
 # Used to correctly select json file
-acronym_to_tracker = {"blu": "blutopia", "bhd": "beyond-hd",
-                      "r4e": "racing4everyone", "acm": "asiancinema",
-                      "ath": "aither", "telly": "telly", "ntelogo": "ntelogo"}
+acronym_to_tracker = {
+    "blu": "blutopia", "bhd": "beyond-hd", "r4e": "racing4everyone",
+    "acm": "asiancinema", "ath": "aither", "telly": "telly",
+    "ntelogo": "ntelogo", "ufhd": "uncutflixhd"
+}
 
 # Now assign some of the values we get from 'config.env' to global variables we use later
 api_keys_dict = {
@@ -69,6 +71,7 @@ api_keys_dict = {
     'ath_api_key': os.getenv('ATH_API_KEY'),
     'telly_api_key': os.getenv('TELLY_API_KEY'),
     'ntelogo_api_key': os.getenv('NTELOGO_API_KEY'),
+    'ufhd_api_key': os.getenv('UFHD_API_KEY'),
     'tmdb_api_key': os.getenv('TMDB_API_KEY')
 }
 # Make sure the TMDB API is provided
