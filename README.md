@@ -32,7 +32,7 @@ Automatically parse, rename, and upload torrents to trackers using the UNIT3D co
         <td><strong><a href="https://ntelogo.org">Ntelogo</a></strong></td>
     </tr>
     <tr style="text-align: left">
-        <td><strong>Uncutflixhd</strong></td>
+        <td><strong>UFHD</strong></td>
         <td><strong><a href="https://uncutflixhd.com/">Uncutflixhd</a></strong></td>
     </tr>
     </tbody>
