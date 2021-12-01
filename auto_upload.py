@@ -192,6 +192,10 @@ def identify_type_and_basic_info(full_path):
     if "type" not in torrent_info:
         raise AssertionError("'type' is not set in the guessit output, something is seriously wrong with this filename")
     if torrent_info["type"] == "episode":  # guessit uses 'episode' for all tv related content (including seasons)
+        # Set a default value for season and episode
+        torrent_info["season_number"] = 0
+        torrent_info["episode_number"] = 0
+
         if 'season' not in guessit(full_path):
             logging.error("could not detect the 'season' using guessit")
             if 'date' in guessit(full_path):  # we can replace the S**E** format with the daily episodes date
@@ -205,30 +209,18 @@ def identify_type_and_basic_info(full_path):
                     "\ncould not detect the 'season' or 'date' (daily episode) so we can not upload this.. quitting now\n",
                     style="bold red"))
 
-        else:  # The season is listed in the guessit output so we can save that to a new dict we create called 'season_episode_num_dict'
-            season_episode_num_dict = {"season_num": int(guessit(full_path)["season"])}
+        else:
+            # This else is for when we have a season number, so we can immediately assign it to the torrent_info dict
+            torrent_info["season_number"] = int(guessit(full_path)["season"])
 
-            # Check to see if this is an individual episode, if so then add that episode number to the dict 'season_episode_num_dict'
+            # check if we have an episode number
             if 'episode' in guessit(full_path):
-                season_episode_num_dict["episode_num"] = int(guessit(full_path)["episode"])
+                torrent_info["episode_number"] = int(guessit(full_path)["episode"])
+                torrent_info["s00e00"] = f'S{torrent_info["season_number"]:02d}E{torrent_info["episode_number"]:02d}'
+            else:
+                # if we don't have an episode number we will just use the season number
+                torrent_info["s00e00"] = f'S{torrent_info["season_number"]:02d}'
 
-            # now format the Season & Episode (basically add '0' in front of the number if num is < 10)
-            for season_episode_key, season_episode_value in season_episode_num_dict.items():
-                if int(season_episode_value) < 10:
-                    season_episode_num_dict[season_episode_key] = str(
-                        "{S_or_E}0{S_or_E_num}".format(S_or_E=season_episode_key[:1].upper(),
-                                                       S_or_E_num=str(season_episode_value)))
-                else:  # got lazy here and just copied the above line but without the '0' that goes between "{S_or_E}" & "{S_or_E_num}" (works but ugly, consider redoing)
-                    season_episode_num_dict[season_episode_key] = str(
-                        "{S_or_E}{S_or_E_num}".format(S_or_E=season_episode_key[:1].upper(),
-                                                      S_or_E_num=str(season_episode_value)))
-
-            # Now combine the Season and Episode into one result (S00E00 format) and add it the torrent_info dict
-            if len(season_episode_num_dict.keys()) == 2:  # This is an episode
-                torrent_info["s00e00"] = str(season_episode_num_dict["season_num"]) + str(
-                    season_episode_num_dict["episode_num"])
-            else:  # this is a full season
-                torrent_info["s00e00"] = season_episode_num_dict["season_num"]
 
     # ------------ If uploading folder, select video file from within folder ------------ #
     # First make sure we have the path to the actual video file saved in the torrent_info dict
@@ -1426,6 +1418,9 @@ def choose_right_tracker_keys():
 
         if optional_key == 'sd' and "sd" in torrent_info:
             tracker_settings[optional_key] = 1
+
+        if optional_key in ['season_number', 'episode_number'] and optional_key in torrent_info:
+            tracker_settings[optional_key] = torrent_info[optional_key]
 
 
 # ---------------------------------------------------------------------- #
