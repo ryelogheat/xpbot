@@ -31,7 +31,6 @@
     "doubleup": "doubleup",
     "sticky": "sticky",
     "freeleech": "free"
-
   },
 
 
@@ -132,7 +131,9 @@
   },
 
   "Optional": {
-    "nfo_file": "file"
+    "nfo_file": "file",
+    "season_number": "string",
+    "episode_number": "string"
   },
 
   "dupes": {

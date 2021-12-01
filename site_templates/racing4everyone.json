@@ -81,7 +81,9 @@
   },
 
   "Optional": {
-    "none": "none"
+    "none": "none",
+    "season_number": "string",
+    "episode_number": "string"
   },
 
 

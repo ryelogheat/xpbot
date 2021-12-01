@@ -125,7 +125,9 @@
 
 
   "Optional": {
-    "nfo": "file"
+    "nfo": "file",
+    "season_number": "string",
+    "episode_number": "string"
   },
 
 

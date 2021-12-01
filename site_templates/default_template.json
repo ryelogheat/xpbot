@@ -203,7 +203,9 @@
     "nfo_file": "file",
     "pack": "int",
     "special": "int",
-    "sd": "int"
+    "sd": "int",
+    "season_number": "string",
+    "episode_number": "string"
   },
 
   "dupes": {
