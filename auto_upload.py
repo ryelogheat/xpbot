@@ -1359,7 +1359,7 @@ def choose_right_tracker_keys():
                         if torrent_info["type"] == val_cat:
                             tracker_settings[config["translation"][translation_key]] = key_cat
 
-                if translation_key in ('source', 'resolution'):
+                if translation_key in ('source', 'resolution', 'resolution_id'):
                     # value = identify_resolution_source(translation_key)
                     tracker_settings[config["translation"][translation_key]] = identify_resolution_source(translation_key)
 
@@ -1751,7 +1751,7 @@ for file in upload_queue:
     # If the TMDB/IMDB was not supplied then we need to search TMDB for it using the title & year
 
     for media_id_key, media_id_val in {"tmdb": args.tmdb, "imdb": args.imdb}.items():
-        if media_id_val is not None and len(media_id_val[0]) > 1:  # we include ' > 1 ' to prevent blank ID's and issues later
+        if media_id_val is not None:
 
             # We have one more check here to verify that the "tt" is included for the IMDB ID (TMDB won't accept it if it doesnt)
             if media_id_key == 'imdb' and not str(media_id_val[0]).lower().startswith('tt'):
