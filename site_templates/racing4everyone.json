@@ -4,81 +4,137 @@
   "upload_form": "https://racing4everyone.eu/api/torrents/upload?api_token={api_key}",
   "torrents_search": "https://racing4everyone.eu/api/torrents/filter?api_token={api_key}",
   "source": "R4E",
-  "bbcode_line_break": "<br />",
+  "bbcode_line_break": "\n",
 
 
   "translation": {
     "dot_torrent": "torrent",
     "torrent_title" : "name",
+
+    "type": "category_id",
+    "resolution": "type_id",
+    "resolution_id": "resolution_id",
     "description": "description",
     "mediainfo": "mediainfo",
-    "type": "category_id",
-    "resolution": "type",
+
     "tmdb": "tmdb",
     "imdb": "imdb",
     "tvdb": "tvdb",
+    "mal": "mal",
+    "igdb": "igdb",
+
     "anon": "anonymous",
     "sd": "sd",
     "optimized": "stream",
 
-
-    "live": "<required_key_live>",
-    "mal": "<required_key>",
-    "igdb": "<required_key>",
-    "nfo_file": "<Optional_key>"
+    "internal": "internal",
+    "featured": "featured",
+    "doubleup": "doubleup",
+    "sticky": "sticky",
+    "freeleech": "free"
   },
 
 
 
   "Required": {
-
     "torrent": "file",
     "name": "string",
     "description": "string",
     "mediainfo": "string",
 
-    "tmdb": "string",
     "tvdb": "string",
+    "tmdb": "string",
     "imdb": "string",
+    "mal": "string",
+    "igdb": "string",
 
     "anonymous": "string",
     "sd": "string",
     "stream": "string",
-
-
 
     "category_id": {
       "70": "movie",
       "79": "episode"
     },
 
+    "internal": "string",
+    "free": "string",
+    "featured": "string",
+    "doubleup": "string",
+    "sticky": "string",
 
-
-    "type": {
-      "2160p": {
+    "type_id": {
+      "17": {
         "2160p": 1
       },
 
-      "1080i": {
+      "14": {
         "1080i": 1
       },
 
-      "1080p": {
+      "9": {
         "1080p" : 1
       },
 
-      "720p": {
+      "11": {
         "720p" : 1
       },
 
-      "SD": {
+      "13": {
         "576p": 2,
         "576i": 2,
         "480p": 2,
         "480i": 2
       }
+    },
+
+
+    "resolution_id": {
+      "1": {
+        "4360p": 1
+      },
+
+      "2": {
+        "2160p": 1
+      },
+
+      "3": {
+        "1080p" : 1
+      },
+
+      "4": {
+        "1080i" : 1
+      },
+
+      "5": {
+        "720p" : 1
+      },
+
+      "6": {
+        "576p" : 1
+      },
+
+      "7": {
+        "576i": 1
+      },
+
+      "8": {
+        "480p": 1
+      },
+
+      "9": {
+        "480i": 1
+      },
+
+      "10": {
+        "other": 1
+      }
+
     }
+
+
   },
+
 
   "Optional": {
     "none": "none",
