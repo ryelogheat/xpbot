@@ -1,9 +1,9 @@
-pymediainfo~=4.2.1
-python-dotenv==0.15.0
-requests~=2.24.0
-ffmpy~=0.2.3
-guessit~=3.3.1
-rich~=9.10.0
+pymediainfo==5.1.0
+python-dotenv==0.19.2
+requests==2.27.1
+ffmpy==0.3.0
+guessit==3.4.3
+rich==11.2.0
 fuzzywuzzy~=0.18.0
 pyimgbox~=1.0.3
 torf~=3.1.3
