@@ -54,7 +54,11 @@
 
     "category_id": {
       "70": "movie",
-      "79": "episode"
+      "79": "episode",
+      "67": "Formula 1",
+      "22": "Formula 2",
+      "68": "Formula 3",
+      "23": "Formula E"
     },
 
     "internal": "string",
@@ -127,7 +131,8 @@
       },
 
       "10": {
-        "other": 1
+        "other": 2,
+        "sd": 2
       }
 
     }

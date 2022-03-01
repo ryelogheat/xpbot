@@ -322,6 +322,13 @@ def identify_type_and_basic_info(full_path):
         if identify_me not in keys_we_need_but_missing_torrent_info:
             keys_we_need_but_missing_torrent_info.append(identify_me)
 
+    # Deal with PDTV & SDTV sources
+    if guessit(full_path)['source'] == 'Digital TV':
+        torrent_info['source'] = 'PDTV'
+    if guessit(full_path)['source'] == 'TV':
+        torrent_info['source'] = 'SDTV'
+
+
     #  Now we'll try to use regex, mediainfo, ffprobe etc to try and auto get that required info
     for missing_val in keys_we_need_but_missing_torrent_info:
         # Save the analyze_video_file() return result into the 'torrent_info' dict
@@ -440,6 +447,7 @@ def analyze_video_file(missing_value):
         # Well shit, this is a problem and I can't think of a good way to consistently & automatically get the right result
         # if auto_mode is set to false we can ask the user but if auto_mode is set to true then we'll just need to quit since we can't upload without it
         if auto_mode == 'false':
+
             console.print(f"Can't auto extract the [bold]{missing_value}[/bold] from the filename, you'll need to manually specify it", style='red', highlight=False)
 
             basic_source_to_source_type_dict = {  # this dict is used to associate a 'parent' source with one if its possible final forms
@@ -484,20 +492,19 @@ def analyze_video_file(missing_value):
                 logging.info(f"Used pymediainfo 'track.width' to identify a resolution of: {str(height)}p")
                 return f"{str(height)}p"
 
+
         # If "Width" somehow fails its unlikely that "Height" will work but might as well try
-        elif str(media_info_video_track.height) != "None":
+        if str(media_info_video_track.height) != "None":
             logging.info(f"Used pymediainfo 'track.height' to identify a resolution of: {str(media_info_video_track.height)}p")
             return f"{str(media_info_video_track.height)}p"
 
-        # User input as a last resort
-        else:
-            # If auto_mode is enabled we can prompt the user for input
-            if auto_mode == 'false':
-                screen_size_input = Prompt.ask(f'\n[red]We could not auto detect the {missing_value}[/red], [bold]Please input it now[/bold]: (e.g. 720p, 1080p, 2160p) ')
-                return str(screen_size_input)
+        # If auto_mode is enabled we can prompt the user for input
+        if auto_mode == 'false':
+            screen_size_input = Prompt.ask(f'\n[red]We could not auto detect the {missing_value}[/red], [bold]Please input it now[/bold]: (e.g. 720p, 1080p, 2160p) ')
+            return str(screen_size_input)
 
-            # If we don't have the resolution we can't upload this media since all trackers require the resolution in the upload form
-            quit_log_reason(reason="Resolution not in filename, and we can't extract it using pymediainfo. Upload form requires the Resolution")
+        # If we don't have the resolution we can't upload this media since all trackers require the resolution in the upload form
+        quit_log_reason(reason="Resolution not in filename, and we can't extract it using pymediainfo. Upload form requires the Resolution")
 
     # ---------------- Audio Channels ---------------- #
     if missing_value == "audio_channels":
@@ -751,6 +758,11 @@ def identify_miscellaneous_details():
     # This function is dedicated to analyzing the filename and extracting snippets such as "repack, "DV", "AMZN", etc
     # Depending on what the "source" is we might need to search for a "web source" (amzn, nf, hulu, etc)
     # We also search for "editions" here, this info is typically made known in the filename so we can use some simple regex to extract it (e.g. extended, Criterion, directors, etc)
+
+    # ah fuck it, we'll just do if/elif/else here
+    # The regex below has been working pretty well so far so I'll just add if/elif/else for PDTV/SDTV here
+    if torrent_info["source"] == "SDTV" or torrent_info["source"] == "PDTV":
+        torrent_info["source_type"] = str(torrent_info["source"].lower())
 
     # ------ Specific Source info ------ #
     if "source_type" not in torrent_info:
@@ -1116,6 +1128,8 @@ def format_title(json_config):
             config_profile = "dvd"
         elif str(torrent_info["source"]).lower() == "web":
             config_profile = "web"
+        elif str(torrent_info["source"]).lower() == "pdtv" or str(torrent_info["source"]).lower() == "sdtv":
+            config_profile = "hdtv"
         else:
             config_profile = torrent_info["source_type"]
 
@@ -1257,6 +1271,7 @@ def choose_right_tracker_keys():
         # 0 = optional
         # 1 = required
         # 2 = select from available items in list
+        print(target_val)
 
         possible_match_layer_1 = []
         for key in config["Required"][(config["translation"][target_val])]:
@@ -1355,6 +1370,17 @@ def choose_right_tracker_keys():
 
                 # Set the category ID, this could be easily hardcoded in (1=movie & 2=tv) but I chose to use JSON data just in case a future tracker switches this up
                 if translation_key == "type":
+                    # TODO: Deal with R4E categories
+                    if tracker == "R4E":
+                        # Prompt the user to select the correct category
+                        user_input_cat = Prompt.ask("Input the correct category: ", choices=config["Required"][required_key].values())
+                        print(f"\nYou selected: {user_input_cat}")
+                        for key_cat, val_cat in config["Required"][required_key].items():
+                            print(val_cat)
+
+                    quit()
+
+
                     for key_cat, val_cat in config["Required"][required_key].items():
                         if torrent_info["type"] == val_cat:
                             tracker_settings[config["translation"][translation_key]] = key_cat
@@ -1724,6 +1750,7 @@ for file in upload_queue:
     if identify_type_and_basic_info(torrent_info["upload_media"]) == 'skip_to_next_file':
         # If there is an issue with the file & we can't upload we use this check to skip the current file & move on to the next (if exists)
         continue
+
 
     # Update discord channel
     if discord_url:
