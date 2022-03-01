@@ -1378,7 +1378,6 @@ def choose_right_tracker_keys():
                         for key_cat, val_cat in config["Required"][required_key].items():
                             print(val_cat)
 
-                    quit()
 
 
                     for key_cat, val_cat in config["Required"][required_key].items():
