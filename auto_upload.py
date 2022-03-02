@@ -115,6 +115,7 @@ parser.add_argument('-batch', action='store_true', help="Pass this arg if you wa
 parser.add_argument('-disc', action='store_true', help="If you are uploading a raw dvd/bluray disc you need to pass this arg")
 parser.add_argument('-e', '--edition', nargs='*', help="Manually provide an 'edition' (e.g. Criterion Collection, Extended, Remastered, etc)")
 parser.add_argument('-nfo', nargs=1, help="Use this to provide the path to an nfo file you want to upload")
+parser.add_argument('-justfile', action='store_true', help="Use this if you want to upload just the file, no external ID's, or rename (e.g. motorsport races)")
 
 # args for Internal uploads
 parser.add_argument('-internal', action='store_true', help="(Internal) Used to mark an upload as 'Internal'", default=argparse.SUPPRESS)
@@ -1116,8 +1117,12 @@ def format_title(json_config):
     # If the user provides this arg with the title right after in double quotes then we automatically use that
     if args.title:
         torrent_info["torrent_title"] = str(args.title[0])
-
-    # If the user does not manually provide the title (Most common) then we pull the renaming template from *.json & use all the info we gathered earlier to generate a title
+    elif args.justfile:
+        if os.path.isfile(torrent_info["upload_media"]):
+            temp_title = str(torrent_info["raw_file_name"]).rsplit(".", 1)[0].replace(".", " ")
+        else:
+            temp_title = str(torrent_info["raw_file_name"]).replace(".", " ")
+        torrent_info["torrent_title"] = " ".join(temp_title.split())
     else:
         # ------------------ Load correct "naming config" ------------------ #
         # Here we open the uploads corresponding .json file and using the current uploads "source" we pull in a custom naming config
@@ -1251,6 +1256,7 @@ def choose_right_tracker_keys():
     optional_items = config["Optional"]
 
     # BLU requires the IMDB with the "tt" removed so we do that here, BHD will automatically put the "tt" back in... so we don't need to make an exception for that
+    print(json.dumps(torrent_info, indent=4))
     if "imdb" in torrent_info:
         if len(torrent_info["imdb"]) >= 2:
             if str(torrent_info["imdb"]).startswith("tt"):
@@ -1271,7 +1277,6 @@ def choose_right_tracker_keys():
         # 0 = optional
         # 1 = required
         # 2 = select from available items in list
-        print(target_val)
 
         possible_match_layer_1 = []
         for key in config["Required"][(config["translation"][target_val])]:
@@ -1370,19 +1375,28 @@ def choose_right_tracker_keys():
 
                 # Set the category ID, this could be easily hardcoded in (1=movie & 2=tv) but I chose to use JSON data just in case a future tracker switches this up
                 if translation_key == "type":
-                    # TODO: Deal with R4E categories
                     if tracker == "R4E":
-                        # Prompt the user to select the correct category
-                        user_input_cat = Prompt.ask("Input the correct category: ", choices=config["Required"][required_key].values())
-                        print(f"\nYou selected: {user_input_cat}")
+                        console.line()
+                        console.rule(title="R4E Categories", style='Red')
+                        # Set up the table with the categories
+                        r4e_cat_table = Table(title="Choose a category", title_style="bold")
+                        r4e_cat_table.add_column("Key", style="cyan")
+                        r4e_cat_table.add_column("Name", style="magenta")
+                        temp_selection_store = {}
+                        for index, (key, val) in enumerate(config["Required"][required_key].items()):
+                            r4e_cat_table.add_row(str(index + 1), val)
+                            temp_selection_store[str(index + 1)] = key
+
+                        console.print(r4e_cat_table)
+
+                        selection = Prompt.ask("Select a category: ", choices=[*temp_selection_store])
+                        tracker_settings[config["translation"][translation_key]] = temp_selection_store[selection]
+
+
+                    else:
                         for key_cat, val_cat in config["Required"][required_key].items():
-                            print(val_cat)
-
-
-
-                    for key_cat, val_cat in config["Required"][required_key].items():
-                        if torrent_info["type"] == val_cat:
-                            tracker_settings[config["translation"][translation_key]] = key_cat
+                            if torrent_info["type"] == val_cat:
+                                tracker_settings[config["translation"][translation_key]] = key_cat
 
                 if translation_key in ('source', 'resolution', 'resolution_id'):
                     # value = identify_resolution_source(translation_key)
@@ -1774,38 +1788,43 @@ for file in upload_queue:
         requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content='f'Video Code: **{torrent_info["video_codec"]}**  |  Audio Code: **{torrent_info["audio_codec"]}**')
 
     # -------- Get TMDB & IMDB ID --------
-    # If the TMDB/IMDB was not supplied then we need to search TMDB for it using the title & year
 
-    for media_id_key, media_id_val in {"tmdb": args.tmdb, "imdb": args.imdb}.items():
-        if media_id_val is not None:
-
-            # We have one more check here to verify that the "tt" is included for the IMDB ID (TMDB won't accept it if it doesnt)
-            if media_id_key == 'imdb' and not str(media_id_val[0]).lower().startswith('tt'):
-                torrent_info["imdb"] = f'tt{media_id_val[0]}'
-            else:
-                torrent_info[media_id_key] = media_id_val[0]
-
-    if all(x in torrent_info for x in ['imdb', 'tmdb']):
-        # This means both the TMDB & IMDB ID are already in the torrent_info dict
-        logging.info("Both TMDB & IMDB ID have been supplied by the user, so no need to make any TMDB API request")
-    elif any(x in torrent_info for x in ['imdb', 'tmdb']):
-        # This means we can skip the search via title/year and instead use whichever ID to get the other (tmdb -> imdb and vice versa)
-        missing_id_key = 'tmdb' if 'imdb' in torrent_info else 'imdb'
-        existing_id_key = 'tmdb' if 'tmdb' in torrent_info else 'imdb'
-        logging.info(f"We are missing '{missing_id_key}' starting TMDB API request now")
-        # Now we call the function that will use the TMDB API to get whichever ID we are missing
-        torrent_info[missing_id_key] = get_external_id(id_site=existing_id_key, id_value=torrent_info[existing_id_key],
-                                                       content_type=torrent_info["type"])
+    if args.justfile:
+        logging.info('Setting TMDB & IMDB to 0 due to --justfile flag')
+        torrent_info["tmdb"] = "0"
+        torrent_info["imdb"] = "0"
     else:
-        logging.info("We are missing both the 'TMDB' & 'IMDB' ID, trying to identify it via title & year")
-        search_tmdb_for_id(query_title=torrent_info["title"], year=torrent_info["year"] if "year" in torrent_info else "",
-                           content_type=torrent_info["type"])
+        # If the TMDB/IMDB was not supplied then we need to search TMDB for it using the title & year
+        for media_id_key, media_id_val in {"tmdb": args.tmdb, "imdb": args.imdb}.items():
+            if media_id_val is not None:
+
+                # We have one more check here to verify that the "tt" is included for the IMDB ID (TMDB won't accept it if it doesnt)
+                if media_id_key == 'imdb' and not str(media_id_val[0]).lower().startswith('tt'):
+                    torrent_info["imdb"] = f'tt{media_id_val[0]}'
+                else:
+                    torrent_info[media_id_key] = media_id_val[0]
+
+        if all(x in torrent_info for x in ['imdb', 'tmdb']):
+            # This means both the TMDB & IMDB ID are already in the torrent_info dict
+            logging.info("Both TMDB & IMDB ID have been supplied by the user, so no need to make any TMDB API request")
+        elif any(x in torrent_info for x in ['imdb', 'tmdb']):
+            # This means we can skip the search via title/year and instead use whichever ID to get the other (tmdb -> imdb and vice versa)
+            missing_id_key = 'tmdb' if 'imdb' in torrent_info else 'imdb'
+            existing_id_key = 'tmdb' if 'tmdb' in torrent_info else 'imdb'
+            logging.info(f"We are missing '{missing_id_key}' starting TMDB API request now")
+            # Now we call the function that will use the TMDB API to get whichever ID we are missing
+            torrent_info[missing_id_key] = get_external_id(id_site=existing_id_key, id_value=torrent_info[existing_id_key], content_type=torrent_info["type"])
+        else:
+            logging.info("We are missing both the 'TMDB' & 'IMDB' ID, trying to identify it via title & year")
+            search_tmdb_for_id(query_title=torrent_info["title"], year=torrent_info["year"] if "year" in torrent_info else "", content_type=torrent_info["type"])
+
+        # -------- Use official info from TMDB --------
+        compare_tmdb_data_local(torrent_info["type"])
+
+
     # Update discord channel
     if discord_url:
         requests.request("POST", discord_url, headers={'Content-Type': 'application/x-www-form-urlencoded'}, data=f'content='f'IMDB: **{torrent_info["imdb"]}**  |  TMDB: **{torrent_info["tmdb"]}**')
-
-    # -------- Use official info from TMDB --------
-    compare_tmdb_data_local(torrent_info["type"])
 
     # -------- User input edition --------
     # Support for user adding in custom edition if its not obvious from filename
