@@ -15,6 +15,7 @@ from pathlib import Path
 
 # These packages need to be installed
 import requests
+from jinja2 import Template
 from dotenv import load_dotenv
 from ffmpy import FFprobe
 from guessit import guessit
@@ -324,9 +325,10 @@ def identify_type_and_basic_info(full_path):
             keys_we_need_but_missing_torrent_info.append(identify_me)
 
     # Deal with PDTV & SDTV sources
-    if guessit(full_path)['source'] == 'Digital TV':
+    use_path = full_path if "raw_video_file" not in torrent_info else torrent_info["raw_video_file"]
+    if guessit(use_path)['source'] == 'Digital TV':
         torrent_info['source'] = 'PDTV'
-    if guessit(full_path)['source'] == 'TV':
+    if guessit(use_path)['source'] == 'TV':
         torrent_info['source'] = 'SDTV'
 
 
@@ -1256,7 +1258,6 @@ def choose_right_tracker_keys():
     optional_items = config["Optional"]
 
     # BLU requires the IMDB with the "tt" removed so we do that here, BHD will automatically put the "tt" back in... so we don't need to make an exception for that
-    print(json.dumps(torrent_info, indent=4))
     if "imdb" in torrent_info:
         if len(torrent_info["imdb"]) >= 2:
             if str(torrent_info["imdb"]).startswith("tt"):
@@ -1869,31 +1870,51 @@ for file in upload_queue:
         # -------- format the torrent title --------
         format_title(config)
 
-        # -------- Fill in description.txt --------
+
+
+        # Open the jinja2 template file
+        description_template = Template(open(f'{working_folder}/description_template.jinja2', 'r').read())
+
+        # Depending on if the user has a nfo file or bbcode failed, we may not have certain key/vals to use in the template, this dict ensures we don't crash
+        include_in_template = {}
+
+        if "nfo_file" in torrent_info and auto_mode == 'false':  # why tf didn't we import this from config.env as a bool? stupid.
+            # Prompt user if they want to include .nfo content in the description
+            if Confirm.ask("\n[medium_orchid3]We've found a .nfo file, do you want to include its contents in the description?[/medium_orchid3]", default=True):
+                include_in_template["nfo_text"] = open(torrent_info["nfo_file"], 'r').read()
+
         if "bbcode_images" in torrent_info:
-            # (Theory) BHD has a different bbcode parser then BLU/ACM so the line break is different for each site
-            #   this is why we set it in each sites *.json file then retrieve it here in this 'for loop' since its different for each site
-            bbcode_line_break = config['bbcode_line_break']
+            include_in_template["img_bbcode"] = open(torrent_info["bbcode_images"], 'r').read()
 
-            # If the user is uploading to multiple sites we don't want to keep appending to the same description.txt file so remove it each time and write clean bbcode to it
-            #  (Note, this doesn't delete bbcode_images.txt so you aren't uploading the same images multiple times)
-            if os.path.isfile(f'{working_folder}/temp_upload/description.txt'):
-                os.remove(f'{working_folder}/temp_upload/description.txt')
+        # Save the rendered template to a variable (text)
+        torrent_info["description"] = description_template.render(include_in_template)
 
-            # Now open up the correct files and format all the bbcode/tags below
-            with open(torrent_info["bbcode_images"], 'r') as bbcode, open(f'{working_folder}/temp_upload/description.txt', 'a') as description:
-                # First add the [center] tags, "Screenshots" header, Size tags etc etc. This only needs to be written once which is why its outside of the 'for loop' below
-                description.write(f'{bbcode_line_break}[center] ---------------------- [size=22]Screenshots[/size] ---------------------- {bbcode_line_break}{bbcode_line_break}')
 
-                # Now write in the actual screenshot bbcode
-                for line in bbcode:
-                    description.write(line)
-
-                # Finally append the entire thing with some shameless self promotion ;) & and the closing [/center] tags and some line breaks
-                description.write(f'{bbcode_line_break}{bbcode_line_break} Uploaded with [color=red]{"<3" if str(tracker).upper() == "BHD" else "❤"}[/color] using [url=https://github.com/ryelogheat/xpbot]XpBot[/url][/center]')
-
-            # Add the finished file to the 'torrent_info' dict
-            torrent_info["description"] = f'{working_folder}/temp_upload/description.txt'
+        # -------- Fill in description.txt --------
+        # if "bbcode_images" in torrent_info:
+        #     # (Theory) BHD has a different bbcode parser then BLU/ACM so the line break is different for each site
+        #     #   this is why we set it in each sites *.json file then retrieve it here in this 'for loop' since its different for each site
+        #     bbcode_line_break = config['bbcode_line_break']
+        #
+        #     # If the user is uploading to multiple sites we don't want to keep appending to the same description.txt file so remove it each time and write clean bbcode to it
+        #     #  (Note, this doesn't delete bbcode_images.txt so you aren't uploading the same images multiple times)
+        #     if os.path.isfile(f'{working_folder}/temp_upload/description.txt'):
+        #         os.remove(f'{working_folder}/temp_upload/description.txt')
+        #
+        #     # Now open up the correct files and format all the bbcode/tags below
+        #     with open(torrent_info["bbcode_images"], 'r') as bbcode, open(f'{working_folder}/temp_upload/description.txt', 'a') as description:
+        #         # First add the [center] tags, "Screenshots" header, Size tags etc etc. This only needs to be written once which is why its outside of the 'for loop' below
+        #         description.write(f'{bbcode_line_break}[center] ---------------------- [size=22]Screenshots[/size] ---------------------- {bbcode_line_break}{bbcode_line_break}')
+        #
+        #         # Now write in the actual screenshot bbcode
+        #         for line in bbcode:
+        #             description.write(line)
+        #
+        #         # Finally append the entire thing with some shameless self promotion ;) & and the closing [/center] tags and some line breaks
+        #         description.write(f'{bbcode_line_break}{bbcode_line_break} Uploaded with [color=red]{"<3" if str(tracker).upper() == "BHD" else "❤"}[/color] using [url=https://github.com/ryelogheat/xpbot]XpBot[/url][/center]')
+        #
+        #     # Add the finished file to the 'torrent_info' dict
+        #     torrent_info["description"] = f'{working_folder}/temp_upload/description.txt'
 
         # -------- Check for Dupes --------
         if os.getenv('check_dupes') == 'true':
