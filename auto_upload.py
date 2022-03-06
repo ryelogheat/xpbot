@@ -280,19 +280,66 @@ def identify_type_and_basic_info(full_path):
 
 
         else:
-            for individual_file in sorted(glob.glob(f"{torrent_info['upload_media']}/*")):
-                found = False  # this is used to break out of the double nested loop
-                logging.info(f"Checking to see if {individual_file} is a video file")
-                if os.path.isfile(individual_file):
-                    file_info = MediaInfo.parse(individual_file)
-                    for track in file_info.tracks:
-                        if track.track_type == "Video":
-                            torrent_info["raw_video_file"] = individual_file
-                            logging.info(f"Using {individual_file} for mediainfo tests")
-                            found = True
+            #
+            list_of_possible_files = sorted(glob.glob(f"{torrent_info['upload_media']}/*"))
+            # -------------------------------------------------- #
+            if auto_mode == "false":
+                # Prompt user if they want to choose a file to use for mediainfo
+                if Confirm.ask("\nWould you like to manually select a video file to use for mediainfo?", default=False):
+                    console.line()
+                    choose_file_table = Table(title="Choose File", show_header=True, header_style="bold")
+                    choose_file_table.add_column("ID", style="bold")
+                    choose_file_table.add_column("File Name", style="bold")
+                    for index, individual_file in enumerate(list_of_possible_files):
+                        choose_file_table.add_row(str(index + 1), individual_file)
+
+                    console.print(choose_file_table)
+
+                    # Prompt user to select file
+                    selected_file = Prompt.ask("\nPlease select the file you would like to use for mediainfo:", choices=[str(index + 1) for index, _ in enumerate(list_of_possible_files)])
+
+                    console.print(f"Ok, we'll use [bold]{list_of_possible_files[int(selected_file) - 1]}[/bold] for mediainfo", style="dodger_blue1")
+                    torrent_info["raw_video_file"] = list_of_possible_files[int(selected_file) - 1]
+
+            for individual_file in list_of_possible_files:
+                while "raw_video_file" not in torrent_info:
+                    if os.path.isfile(individual_file):
+                        file_info = MediaInfo.parse(individual_file)
+                        for track in file_info.tracks:
+                            if track.track_type == "Video":
+                                torrent_info["raw_video_file"] = individual_file
+                                logging.info(f"Using {individual_file} for mediainfo tests")
+                                break
+                            else:
+                                continue
+                    else:
+                        continue
+
+            if "raw_video_file" not in torrent_info:
+                logging.critical("Unable to find a video file to use for mediainfo")
+                raise AssertionError("Unable to find a video file to use for mediainfo")
+
+            # -------------------------------------------------- #
+
+            # Now that we've "verified" mediainfo is on the system, we can analyze the folder and continue the upload
+
+
+                pass
+
+            else:
+                for individual_file in sorted(glob.glob(f"{torrent_info['upload_media']}/*")):
+                    found = False  # this is used to break out of the double nested loop
+                    logging.info(f"Checking to see if {individual_file} is a video file")
+                    if os.path.isfile(individual_file):
+                        file_info = MediaInfo.parse(individual_file)
+                        for track in file_info.tracks:
+                            if track.track_type == "Video":
+                                torrent_info["raw_video_file"] = individual_file
+                                logging.info(f"Using {individual_file} for mediainfo tests")
+                                found = True
+                                break
+                        if found:
                             break
-                    if found:
-                        break
 
         if 'raw_video_file' not in torrent_info:
             logging.critical(f"The folder {torrent_info['upload_media']} does not contain any video files")
@@ -326,10 +373,11 @@ def identify_type_and_basic_info(full_path):
 
     # Deal with PDTV & SDTV sources
     use_path = full_path if "raw_video_file" not in torrent_info else torrent_info["raw_video_file"]
-    if guessit(use_path)['source'] == 'Digital TV':
-        torrent_info['source'] = 'PDTV'
-    if guessit(use_path)['source'] == 'TV':
-        torrent_info['source'] = 'SDTV'
+    if 'source' in guessit(use_path):
+        if guessit(use_path)['source'] == 'Digital TV':
+            torrent_info['source'] = 'PDTV'
+        if guessit(use_path)['source'] == 'TV':
+            torrent_info['source'] = 'SDTV'
 
 
     #  Now we'll try to use regex, mediainfo, ffprobe etc to try and auto get that required info
@@ -451,17 +499,19 @@ def analyze_video_file(missing_value):
         # if auto_mode is set to false we can ask the user but if auto_mode is set to true then we'll just need to quit since we can't upload without it
         if auto_mode == 'false':
 
-            console.print(f"Can't auto extract the [bold]{missing_value}[/bold] from the filename, you'll need to manually specify it", style='red', highlight=False)
+            console.print(f"\nCan't auto extract the [bold]{missing_value}[/bold] from the filename, you'll need to manually specify it", style='red', highlight=False)
 
             basic_source_to_source_type_dict = {  # this dict is used to associate a 'parent' source with one if its possible final forms
                 'bluray': ['disc', 'remux', 'encode'],
                 'web': ['rip', 'dl'],
                 'hdtv': 'hdtv',
-                'dvd': ['disc', 'remux', 'rip']
+                'dvd': ['disc', 'remux', 'rip'],
+                'pdtv': 'pdtv',
+                'sdtv': 'sdtv'
             }
 
             # First get a basic source into the torrent_info dict, we'll prompt the user for a more specific source next (if needed, e.g. 'bluray' could mean 'remux', 'disc', or 'encode')
-            user_input_source = Prompt.ask("Input one of the following: ", choices=["bluray", "web", "hdtv", "dvd"])
+            user_input_source = Prompt.ask("Input one of the following: ", choices=["bluray", "web", "hdtv", "dvd", "pdtv", "sdtv"])
             torrent_info["source"] = user_input_source
             # Since the parent source isn't the filename we know that the 'final form' definitely won't be so we don't return the 'parent source' yet
             # We instead prompt the user again to figure out if its a remux, encode, webdl, rip, etc etc
@@ -588,8 +638,7 @@ def analyze_video_file(missing_value):
     if missing_value == "audio_codec":
 
         # We store some common audio code translations in this dict
-        audio_codec_dict = {"AC3": "DD", "AC3+": "DD+", "Dolby Digital Plus": "DD+", "Dolby Digital": "DD", "AAC": "AAC", "AC-3": "DD", "FLAC": "FLAC", "DTS": "DTS", "Opus": "Opus", "E-AC-3": "DD+", "A_EAC3": "DD+",
-                            "A_AC3": "DD"}
+        audio_codec_dict = {"AC3": "DD", "AC3+": "DD+", "Dolby Digital Plus": "DD+", "Dolby Digital": "DD", "AAC": "AAC", "AC-3": "DD", "FLAC": "FLAC", "DTS": "DTS", "Opus": "Opus", "E-AC-3": "DD+", "A_EAC3": "DD+", "A_AC3": "DD"}
 
         # First check to see if GuessIt inserted an audio_codec into torrent_info and if it did then we can verify its formatted correctly
         if "audio_codec" in torrent_info:
@@ -615,8 +664,11 @@ def analyze_video_file(missing_value):
 
             if media_info_audio_track.codec_id is not None:
                 # The release "La.La.Land.2016.1080p.UHD.BluRay.DDP7.1.HDR.x265-NCmt.mkv" when using media_info_audio_track.codec shows the codec as AC3 not EAC3..
-                # so well try to use media_info_audio_track.codec_id first
-                audio_codec = media_info_audio_track.codec_id
+                # Damn, another file has "mp4a-40-2" under codec_id. Pretty sure that's just standard AAC so we'll just use that
+                if media_info_audio_track.codec_id == "mp4a-40-2":
+                    audio_codec = "AAC"
+                else:
+                    audio_codec = media_info_audio_track.codec_id
 
             elif media_info_audio_track.codec is not None:
                 # On rare occasion *.codec is not available and we need to use *.format
