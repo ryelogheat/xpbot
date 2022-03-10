@@ -1933,7 +1933,15 @@ for file in upload_queue:
         if "nfo_file" in torrent_info and auto_mode == 'false':  # why tf didn't we import this from config.env as a bool? stupid.
             # Prompt user if they want to include .nfo content in the description
             if Confirm.ask("\n[medium_orchid3]We've found a .nfo file, do you want to include its contents in the description?[/medium_orchid3]", default=True):
-                include_in_template["nfo_text"] = open(torrent_info["nfo_file"], 'r').read()
+                try:
+                    with open(torrent_info['nfo_file'], 'r', encoding='utf-8') as f:
+                        nfo_content = f.read()
+                except UnicodeDecodeError as e:
+                    logging.error(f"UnicodeDecodeError on {torrent_info['nfo_file']} - Attempting to read as cps437")
+                    with open(torrent_info['nfo_file'], 'r', encoding='cp437') as f:
+                        nfo_content = f.read()
+
+                include_in_template["nfo_text"] = nfo_content
 
         if "bbcode_images" in torrent_info:
             include_in_template["img_bbcode"] = open(torrent_info["bbcode_images"], 'r').read()
