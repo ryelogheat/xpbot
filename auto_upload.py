@@ -117,6 +117,7 @@ parser.add_argument('-disc', action='store_true', help="If you are uploading a r
 parser.add_argument('-e', '--edition', nargs='*', help="Manually provide an 'edition' (e.g. Criterion Collection, Extended, Remastered, etc)")
 parser.add_argument('-nfo', nargs=1, help="Use this to provide the path to an nfo file you want to upload")
 parser.add_argument('-justfile', action='store_true', help="Use this if you want to upload just the file, no external ID's, or rename (e.g. motorsport races)")
+parser.add_argument('-note', nargs=1, help="Show the note passed here in the uploads description")
 
 # args for Internal uploads
 parser.add_argument('-internal', action='store_true', help="(Internal) Used to mark an upload as 'Internal'", default=argparse.SUPPRESS)
@@ -1930,51 +1931,34 @@ for file in upload_queue:
         # Depending on if the user has a nfo file or bbcode failed, we may not have certain key/vals to use in the template, this dict ensures we don't crash
         include_in_template = {}
 
-        if "nfo_file" in torrent_info and auto_mode == 'false':  # why tf didn't we import this from config.env as a bool? stupid.
-            # Prompt user if they want to include .nfo content in the description
-            if Confirm.ask("\n[medium_orchid3]We've found a .nfo file, do you want to include its contents in the description?[/medium_orchid3]", default=True):
-                try:
-                    with open(torrent_info['nfo_file'], 'r', encoding='utf-8') as f:
-                        nfo_content = f.read()
-                except UnicodeDecodeError as e:
-                    logging.error(f"UnicodeDecodeError on {torrent_info['nfo_file']} - Attempting to read as cps437")
-                    with open(torrent_info['nfo_file'], 'r', encoding='cp437') as f:
-                        nfo_content = f.read()
+        if "nfo_file" in torrent_info:
+            try:
+                with open(torrent_info['nfo_file'], 'r', encoding='utf-8') as f:
+                    nfo_content = f.read()
+            except UnicodeDecodeError as e:
+                logging.error(f"UnicodeDecodeError on {torrent_info['nfo_file']} - Attempting to read as cps437")
+                with open(torrent_info['nfo_file'], 'r', encoding='cp437') as f:
+                    nfo_content = f.read()
 
+            # Prompt user if they want to include .nfo content in the description
+            if auto_mode == 'false':
+                if Confirm.ask("\n[medium_orchid3]We've found a .nfo file, do you want to include its contents in the description?[/medium_orchid3]", default=True):
+                    include_in_template["nfo_content"] = nfo_content
+            else:
+                # Include it by default if we are in auto mode
                 include_in_template["nfo_text"] = nfo_content
 
         if "bbcode_images" in torrent_info:
             include_in_template["img_bbcode"] = open(torrent_info["bbcode_images"], 'r').read()
 
+        if args.note:
+            # Replace \n with newline in python
+            note = str(args.note[0]).replace("\\n", "\n")
+            include_in_template["desc_note"] = note
+
         # Save the rendered template to a variable (text)
         torrent_info["description"] = description_template.render(include_in_template)
 
-
-        # -------- Fill in description.txt --------
-        # if "bbcode_images" in torrent_info:
-        #     # (Theory) BHD has a different bbcode parser then BLU/ACM so the line break is different for each site
-        #     #   this is why we set it in each sites *.json file then retrieve it here in this 'for loop' since its different for each site
-        #     bbcode_line_break = config['bbcode_line_break']
-        #
-        #     # If the user is uploading to multiple sites we don't want to keep appending to the same description.txt file so remove it each time and write clean bbcode to it
-        #     #  (Note, this doesn't delete bbcode_images.txt so you aren't uploading the same images multiple times)
-        #     if os.path.isfile(f'{working_folder}/temp_upload/description.txt'):
-        #         os.remove(f'{working_folder}/temp_upload/description.txt')
-        #
-        #     # Now open up the correct files and format all the bbcode/tags below
-        #     with open(torrent_info["bbcode_images"], 'r') as bbcode, open(f'{working_folder}/temp_upload/description.txt', 'a') as description:
-        #         # First add the [center] tags, "Screenshots" header, Size tags etc etc. This only needs to be written once which is why its outside of the 'for loop' below
-        #         description.write(f'{bbcode_line_break}[center] ---------------------- [size=22]Screenshots[/size] ---------------------- {bbcode_line_break}{bbcode_line_break}')
-        #
-        #         # Now write in the actual screenshot bbcode
-        #         for line in bbcode:
-        #             description.write(line)
-        #
-        #         # Finally append the entire thing with some shameless self promotion ;) & and the closing [/center] tags and some line breaks
-        #         description.write(f'{bbcode_line_break}{bbcode_line_break} Uploaded with [color=red]{"<3" if str(tracker).upper() == "BHD" else "❤"}[/color] using [url=https://github.com/ryelogheat/xpbot]XpBot[/url][/center]')
-        #
-        #     # Add the finished file to the 'torrent_info' dict
-        #     torrent_info["description"] = f'{working_folder}/temp_upload/description.txt'
 
         # -------- Check for Dupes --------
         if os.getenv('check_dupes') == 'true':
