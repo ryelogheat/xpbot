@@ -103,7 +103,7 @@ is_live_on_site = str(os.getenv('live')).lower()
 parser = argparse.ArgumentParser()
 # Commonly used args:
 parser.add_argument('-t', '--trackers', nargs='*', required=True, help="Tracker(s) to upload to. Space-separates if multiple (no commas)")
-parser.add_argument('-p', '--path', nargs='*', required=True, help="Use this to provide path(s) to file/folder")
+parser.add_argument('-p', '--path', nargs='*', help="Use this to provide path(s) to file/folder")
 parser.add_argument('-tmdb', nargs=1, help="Use this to manually provide the TMDB ID")
 parser.add_argument('-imdb', nargs=1, help="Use this to manually provide the IMDB ID")
 parser.add_argument('-anon', action='store_true', help="if you want your upload to be anonymous (no other info needed, just input '-anon'")
@@ -118,6 +118,7 @@ parser.add_argument('-e', '--edition', nargs='*', help="Manually provide an 'edi
 parser.add_argument('-nfo', nargs=1, help="Use this to provide the path to an nfo file you want to upload")
 parser.add_argument('-justfile', action='store_true', help="Use this if you want to upload just the file, no external ID's, or rename (e.g. motorsport races)")
 parser.add_argument('-note', nargs=1, help="Show the note passed here in the uploads description")
+parser.add_argument('-c', '--copy', nargs=1, help="Provide the URL to an existing torrent & we'll try and re-upload it to the tracker specified with the '-t' arg")
 
 # args for Internal uploads
 parser.add_argument('-internal', action='store_true', help="(Internal) Used to mark an upload as 'Internal'", default=argparse.SUPPRESS)
@@ -1729,6 +1730,64 @@ if auto_mode == "false":
 
 # TODO an issue with batch mode currently is that we have a lot of "assert" & sys.exit statements during the prep work we do for each upload, if one of these "assert/quit" statements
 #  get triggered, then it will quit the entire script instead of just moving on to the next file in the list 'upload_queue'
+
+
+# ---------- Clone/Copy an existing torrent from Site X to Site Y ---------- #
+if args.copy:
+    clone_me_url = args.copy[0]
+    base_domain = str(args.copy[0].split("/")[2] if args.copy[0].startswith("http") else args.copy[0].split("/")[0]).split(".")[-2].lower()
+    console.print(f"Attempting to re-upload a torrent from [bold cyan]{base_domain}[/bold cyan]")
+
+    # Verify we have a site_template for the domain we are trying to clone from
+    if f'{base_domain}.json' not in os.listdir(f"{working_folder}/site_templates"):
+        logging.error(f"No site_template found for domain [bold cyan]{base_domain}[/bold cyan]")
+        sys.exit(console.print(f"No site_template found for domain [bold cyan]{base_domain}[/bold cyan]", style="bold red", highlight=False))
+
+    # TODO - Deal with BHD later
+    if base_domain == 'beyond-hd':
+        sys.exit(console.print(f"Cloning from [bold cyan]{base_domain}[/bold cyan] is not supported yet", style="bold red", highlight=False))
+
+
+    clone_from_tracker_acronym = None
+    for t_acr, t_name in acronym_to_tracker.items():
+        if t_name.lower() == base_domain:
+            clone_from_tracker_acronym = t_acr
+            break
+
+    if clone_from_tracker_acronym is None:
+        logging.error(f"No tracker acronym found for domain [bold cyan]{base_domain}[/bold cyan]")
+        sys.exit(console.print(f"No tracker acronym found for domain [bold cyan]{base_domain}[/bold cyan]", style="bold red", highlight=False))
+
+    try:
+        torrent_details_request = requests.get(f"{clone_me_url.replace('/torrents/', '/api/torrents/')}?api_token={os.getenv(f'{clone_from_tracker_acronym.upper()}_API_KEY')}", timeout=5)
+        torrent_details = torrent_details_request.json()
+        # Verify "media_info" and "description" keys are present in the response
+        if any(key not in torrent_details['attributes'] for key in ["media_info", "description"]):
+            raise AssertionError("The tracker your cloning from does not support the API we need to clone a torrent (missing 'description' and 'media_info' in response)")
+
+        print(torrent_details['attributes']["description"])
+    except requests.exceptions.RequestException as err:
+        logging.exception(f"Error requesting: {clone_me_url.replace('/torrents/', '/api/torrents/')}?api_token=xxxxx")
+        sys.exit(console.print(f"Error requesting torrent details from [bold cyan]{base_domain}[/bold cyan]", style="bold red", highlight=False))
+
+
+
+
+
+
+    # Get the site_template for the domain we are trying to clone from
+    with open(f"{working_folder}/site_templates/{base_domain}.json", "r", encoding="utf-8") as clone_from_config_file:
+        clone_from_config = json.load(clone_from_config_file)
+
+
+
+    # for key in os.environ:
+    #     if key.endswith('ANNOUNCE_URL') and os.environ[key]
+    #         print(os.environ[key])
+    quit()
+
+
+
 
 # ---------- Batch mode prep ---------- #
 if args.batch and len(args.path) > 1:
