@@ -60,7 +60,7 @@ load_dotenv(f'{working_folder}/config.env')
 acronym_to_tracker = {
     "blu": "blutopia", "bhd": "beyond-hd", "r4e": "racing4everyone",
     "acm": "asiancinema", "ath": "aither", "telly": "telly",
-    "ntelogo": "ntelogo", "ufhd": "uncutflixhd"
+    "ntelogo": "ntelogo", "ufhd": "uncutflixhd", "bzp": "breizhpeers",
 }
 
 # Now assign some of the values we get from 'config.env' to global variables we use later
@@ -73,6 +73,7 @@ api_keys_dict = {
     'telly_api_key': os.getenv('TELLY_API_KEY'),
     'ntelogo_api_key': os.getenv('NTELOGO_API_KEY'),
     'ufhd_api_key': os.getenv('UFHD_API_KEY'),
+    'bzp_api_key': os.getenv('BZP_API_KEY'),
     'tmdb_api_key': os.getenv('TMDB_API_KEY')
 }
 # Make sure the TMDB API is provided
@@ -304,7 +305,7 @@ def identify_type_and_basic_info(full_path):
                     torrent_info["raw_video_file"] = list_of_possible_files[int(selected_file) - 1]
 
             for individual_file in list_of_possible_files:
-                while "raw_video_file" not in torrent_info:
+                if "raw_video_file" not in torrent_info:
                     if os.path.isfile(individual_file):
                         file_info = MediaInfo.parse(individual_file)
                         for track in file_info.tracks:
@@ -1505,10 +1506,8 @@ def choose_right_tracker_keys():
             if len(upload_these_tags_list) != 0:
                 tracker_settings[optional_key] = ",".join(upload_these_tags_list)
 
-        # TODO figure out why .nfo uploads fail on BHD & don't display on BLU...
-        # if optional_key in ["nfo_file", "nfo"] and "nfo_file" in torrent_info:
-        #     # So far
-        #     tracker_settings[optional_key] = torrent_info["nfo_file"]
+        if optional_key in ["nfo_file", "nfo"] and "nfo_file" in torrent_info:
+            tracker_settings[optional_key] = torrent_info["nfo_file"]
 
         if optional_key == 'sd' and "sd" in torrent_info:
             tracker_settings[optional_key] = 1
@@ -1762,28 +1761,42 @@ if args.copy:
         torrent_details_request = requests.get(f"{clone_me_url.replace('/torrents/', '/api/torrents/')}?api_token={os.getenv(f'{clone_from_tracker_acronym.upper()}_API_KEY')}", timeout=5)
         torrent_details = torrent_details_request.json()
         # Verify "media_info" and "description" keys are present in the response
-        if any(key not in torrent_details['attributes'] for key in ["media_info", "description"]):
-            raise AssertionError("The tracker your cloning from does not support the API we need to clone a torrent (missing 'description' and 'media_info' in response)")
-
-        print(torrent_details['attributes']["description"])
+        for needed_key in ["media_info", "description", "category_id", "type_id", "resolution_id"]:
+            if needed_key not in torrent_details["attributes"]:
+                raise AssertionError(f"No [bold cyan]{needed_key}[/bold cyan] key found in response from [bold cyan]{clone_from_tracker_acronym}[/bold cyan] This tracker is not supported yet")
     except requests.exceptions.RequestException as err:
         logging.exception(f"Error requesting: {clone_me_url.replace('/torrents/', '/api/torrents/')}?api_token=xxxxx")
         sys.exit(console.print(f"Error requesting torrent details from [bold cyan]{base_domain}[/bold cyan]", style="bold red", highlight=False))
 
 
-
-
-
-
     # Get the site_template for the domain we are trying to clone from
-    with open(f"{working_folder}/site_templates/{base_domain}.json", "r", encoding="utf-8") as clone_from_config_file:
-        clone_from_config = json.load(clone_from_config_file)
+    clone_from_config_file = open(f"{working_folder}/site_templates/{base_domain}.json", "r", encoding="utf-8")
+    clone_from_config = json.load(clone_from_config_file)
+
+    # Get the definitions of type, category, resolution, etc. for the tracker we are cloning from
+
+    for k,v in clone_from_config.items()["translation"]:
+        pass
 
 
 
-    # for key in os.environ:
-    #     if key.endswith('ANNOUNCE_URL') and os.environ[key]
-    #         print(os.environ[key])
+    print(f"This is a [bold cyan]{torrent_details['attributes']['category_id']}[/bold cyan]")
+    print(f"type_id [bold cyan]{torrent_details['attributes']['type_id']}[/bold cyan]")
+    print(f"resolution_id [bold cyan]{torrent_details['attributes']['resolution_id']}[/bold cyan]")
+
+    # A type_id has the following format:
+    #       "3": {
+    #         "remux": 1,
+    #         "bluray_remux": 2,
+    #         "dvd_remux": 2
+    #       },
+    # A 1 means that the key is a required word, a 2 means that the key is an optional word but one of the two is required
+    # We need to find a type_id in
+
+
+
+    # print(torrent_details)
+
     quit()
 
 
@@ -2002,7 +2015,7 @@ for file in upload_queue:
             # Prompt user if they want to include .nfo content in the description
             if auto_mode == 'false':
                 if Confirm.ask("\n[medium_orchid3]We've found a .nfo file, do you want to include its contents in the description?[/medium_orchid3]", default=True):
-                    include_in_template["nfo_content"] = nfo_content
+                    include_in_template["nfo_text"] = nfo_content
             else:
                 # Include it by default if we are in auto mode
                 include_in_template["nfo_text"] = nfo_content
