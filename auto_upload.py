@@ -60,7 +60,7 @@ load_dotenv(f'{working_folder}/config.env')
 acronym_to_tracker = {
     "blu": "blutopia", "bhd": "beyond-hd", "r4e": "racing4everyone",
     "acm": "asiancinema", "ath": "aither", "telly": "telly",
-    "ntelogo": "ntelogo", "ufhd": "uncutflixhd"
+    "ntelogo": "ntelogo", "ufhd": "uncutflixhd", "dst": "desitorrents"
 }
 
 # Now assign some of the values we get from 'config.env' to global variables we use later
@@ -72,6 +72,7 @@ api_keys_dict = {
     'ath_api_key': os.getenv('ATH_API_KEY'),
     'telly_api_key': os.getenv('TELLY_API_KEY'),
     'ntelogo_api_key': os.getenv('NTELOGO_API_KEY'),
+    'dst_api_key': os.getenv('DST_API_KEY'),
     'ufhd_api_key': os.getenv('UFHD_API_KEY'),
     'tmdb_api_key': os.getenv('TMDB_API_KEY')
 }
@@ -1504,10 +1505,8 @@ def choose_right_tracker_keys():
             if len(upload_these_tags_list) != 0:
                 tracker_settings[optional_key] = ",".join(upload_these_tags_list)
 
-        # TODO figure out why .nfo uploads fail on BHD & don't display on BLU...
-        # if optional_key in ["nfo_file", "nfo"] and "nfo_file" in torrent_info:
-        #     # So far
-        #     tracker_settings[optional_key] = torrent_info["nfo_file"]
+        if optional_key in ["nfo_file", "nfo"] and "nfo_file" in torrent_info:
+            tracker_settings[optional_key] = torrent_info["nfo_file"]
 
         if optional_key == 'sd' and "sd" in torrent_info:
             tracker_settings[optional_key] = 1
@@ -1558,8 +1557,7 @@ def upload_to_site(upload_to, tracker_api_key):
         # prompt the user to verify everything looks OK before uploading
 
         # ------- Show the user a table of the API KEY/VAL (TEXT) that we are about to send ------- #
-        review_upload_settings_text_table = Table(title=f"\n\n\n\n[bold][deep_pink1]{upload_to} POST data (Text):[/bold][/deep_pink1]", show_header=True,
-                                                  header_style="bold cyan", box=box.HEAVY, border_style="dim", show_lines=True, title_justify='left')
+        review_upload_settings_text_table = Table(title=f"\n\n\n\n[bold][deep_pink1]{upload_to} POST data (Text):[/bold][/deep_pink1]", show_header=True, header_style="bold cyan", box=box.HEAVY, border_style="dim", show_lines=True, title_justify='left')
         review_upload_settings_text_table.add_column("Key", justify="left")
         review_upload_settings_text_table.add_column("Value (TEXT)", justify="left")
         # Insert the data into the table, raw data (no paths)
@@ -1571,8 +1569,7 @@ def upload_to_site(upload_to, tracker_api_key):
         console.print(review_upload_settings_text_table)
 
         # ------- Show the user a table of the API KEY/VAL (FILE) that we are about to send ------- #
-        review_upload_settings_files_table = Table(title=f"\n\n\n\n[bold][green3]{upload_to} POST data (FILES):[/green3][/bold]", show_header=True,
-                                                   header_style="bold cyan", box=box.HEAVY, border_style="dim", show_lines=True, title_justify='left')
+        review_upload_settings_files_table = Table(title=f"\n\n\n\n[bold][green3]{upload_to} POST data (FILES):[/green3][/bold]", show_header=True, header_style="bold cyan", box=box.HEAVY, border_style="dim", show_lines=True, title_justify='left')
         review_upload_settings_files_table.add_column("Key", justify="left")
         review_upload_settings_files_table.add_column("Value (FILE)", justify="left")
         # Insert the path to the files we are uploading
@@ -1943,7 +1940,7 @@ for file in upload_queue:
             # Prompt user if they want to include .nfo content in the description
             if auto_mode == 'false':
                 if Confirm.ask("\n[medium_orchid3]We've found a .nfo file, do you want to include its contents in the description?[/medium_orchid3]", default=True):
-                    include_in_template["nfo_content"] = nfo_content
+                    include_in_template["nfo_text"] = nfo_content
             else:
                 # Include it by default if we are in auto mode
                 include_in_template["nfo_text"] = nfo_content

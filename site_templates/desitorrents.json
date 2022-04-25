@@ -1,0 +1,205 @@
+{
+  "name": "DesiTorrents",
+  "url": "https://desitorrents.tv",
+  "upload_form": "https://desitorrents.tv/api/torrents/upload?api_token={api_key}",
+  "torrents_search": "https://desitorrents.tv/api/torrents/filter?api_token={api_key}",
+  "source": "DesiTorrents",
+  "bbcode_line_break": "\n",
+
+
+  "translation": {
+    "dot_torrent": "torrent",
+    "torrent_title" : "name",
+    "description": "description",
+    "mediainfo": "mediainfo",
+    "type": "category_id",
+    "source": "type_id",
+    "resolution": "resolution_id",
+    "tmdb": "tmdb",
+    "imdb": "imdb",
+    "anon": "anonymous",
+    "live": "live",
+    "sd": "sd",
+    "tvdb": "tvdb",
+    "mal": "mal",
+    "igdb": "igdb",
+    "optimized": "stream",
+    "nfo_file": "nfo",
+
+    "internal": "internal",
+    "featured": "featured",
+    "doubleup": "doubleup",
+    "sticky": "sticky",
+    "freeleech": "free"
+  },
+
+
+  "Required": {
+    "torrent": "file",
+    "name": "string",
+    "description": "string",
+    "mediainfo": "string",
+    "anonymous": "string",
+    "sd": "string",
+    "stream": "string",
+
+    "tvdb": "string",
+    "tmdb": "string",
+    "imdb": "string",
+    "mal": "string",
+    "igdb": "string",
+
+    "internal": "string",
+    "free": "string",
+    "featured": "string",
+    "doubleup": "string",
+    "sticky": "string",
+
+    "category_id": {
+      "1": "movie",
+      "2": "episode"
+    },
+
+    "type_id": {
+      "2": {
+        "bluray_remux": 1,
+        "2160p": 1
+      },
+      "1": {
+        "2160p": 1
+      },
+      "3": {
+        "bluray_disc": 1,
+        "bd_50": 1
+      },
+      "4": {
+        "bluray_disc": 1,
+        "bd_25": 1
+      },
+      "5": {
+        "bluray_remux": 1,
+        "1080p": 2,
+        "1080i": 2,
+        "720p": 2
+      },
+      "8": {
+        "dvd_remux": 1,
+        "576p": 2,
+        "540p" : 2,
+        "480p": 2
+      },
+      "11": {
+        "webdl": 2,
+        "webrip" : 2
+      },
+      "12": {
+        "bluray_encode": 1
+      },
+      "13": {
+        "other": 0
+      }
+    },
+
+
+    "resolution_id": {
+      "9": {
+        "4360p": 1
+      },
+
+      "8": {
+        "2160p": 1
+      },
+
+      "11": {
+        "1080p" : 1
+      },
+
+      "7": {
+        "1080i" : 1
+      },
+
+      "6": {
+        "720p" : 1
+      },
+
+      "4": {
+        "576p" : 1
+      },
+
+      "3": {
+        "576i": 1
+      },
+
+      "2": {
+        "480p": 1
+      },
+
+      "1": {
+        "480i": 1
+      },
+
+      "12": {
+        "540p": 1
+      },
+
+      "5": {
+        "720i": 1
+      },
+
+      "10": {
+        "other": 1
+      }
+
+    }
+  },
+
+  "Optional": {
+    "season_number": "string",
+    "episode_number": "string"
+  },
+
+  "dupes": {
+    "request": "GET",
+    "url_format": "{search_url}&imdbId={imdb}",
+
+    "parse_json": {
+      "top_lvl": "data",
+      "torrent_details": "attributes"
+    },
+
+    "different_cuts": "100",
+    "2160p_remux": 100,
+    "2160p_encode": 100,
+    "1080p_remux": 100,
+    "1080p_encode": 100,
+    "720p_encode": 100,
+    "else": 100
+  },
+
+  "torrent_title_format": {
+    "episode": {
+      "bluray_disc": "{title} {year} {s00e00} {screen_size} {region} {source} {hdr} {dv} {video_codec} {audio_codec} {atmos} {audio_channels} {release_group}",
+      "bluray_remux": "{title} {year} {s00e00} {repack} {screen_size} {uhd} {hybrid} {source} {remux} {hdr} {dv} {video_codec} {audio_codec} {audio_channels} {atmos} {release_group}",
+      "bluray_encode": "{title} {year} {s00e00} {repack} {screen_size} {uhd} {hybrid} {source} {audio_codec} {atmos} {audio_channels} {hdr} {dv} {video_codec} {release_group}",
+      "web": "{title} {year} {s00e00} {repack} {screen_size} {web_source} {web_type} {audio_codec} {atmos} {audio_channels} {hdr} {dv} {video_codec} {release_group}",
+      "hdtv": "{title} {year} {s00e00} {repack} {screen_size} {hybrid} {source} {audio_codec} {audio_channels} {video_codec} {release_group}",
+      "dvd": "{title} {year} {s00e00} {edition} {repack} {screen_size} {region} {hybrid} {source} {video_codec} {remux} {audio_codec} {atmos} {audio_channels} {release_group}"
+    },
+
+    "movie": {
+      "bluray_disc": "{title} {year} {edition} {repack} {screen_size} {region} {source} {hdr} {dv} {video_codec} {audio_codec} {atmos} {audio_channels} {release_group}",
+      "bluray_remux": "{title} {year} {edition} {repack} {screen_size} {uhd} {hybrid} {source} {remux} {hdr} {dv} {video_codec} {audio_codec} {atmos} {audio_channels} {release_group}",
+      "bluray_encode": "{title} {year} {edition} {repack} {screen_size} {uhd} {hybrid} {source} {audio_codec} {atmos} {audio_channels} {hdr} {dv} {video_codec} {release_group}",
+      "web": "{title} {year} {edition} {repack} {screen_size} {hybrid} {web_source} {web_type} {audio_codec} {atmos} {audio_channels} {hdr} {dv} {video_codec} {release_group}",
+      "hdtv": "{title} {year} {edition} {repack} {screen_size} {hybrid} {source} {audio_codec} {atmos} {audio_channels} {video_codec} {release_group}",
+      "dvd": "{title} {year} {edition} {repack} {screen_size} {region} {hybrid} {source} {video_codec} {remux} {audio_codec} {atmos} {audio_channels} {release_group}"
+    }
+  },
+
+
+  "banned_groups": [
+  ]
+
+}
+
+
