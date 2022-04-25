@@ -35,6 +35,10 @@ Automatically parse, rename, and upload torrents to trackers using the UNIT3D co
         <td><strong>UFHD</strong></td>
         <td><strong><a href="https://uncutflixhd.com/">Uncutflixhd</a></strong></td>
     </tr>
+    <tr style="text-align: left">
+        <td><strong>DST</strong></td>
+        <td><strong><a href="https://desitorrents.tv">DesiTorrents</a></strong></td>
+    </tr>
     </tbody>
 </table>
 
