@@ -399,7 +399,7 @@ def identify_type_and_basic_info(full_path):
     }
     presentable_type = 'Movie' if torrent_info["type"] == 'movie' else 'TV Show'
 
-    codec_result_table = Table(box=box.SQUARE, title='Basic media summery', title_style='bold #be58bf')
+    codec_result_table = Table(box=box.SQUARE, title='Basic media summary', title_style='bold #be58bf')
 
     for column_display_value in columns_we_want.values():
         if len(column_display_value) != 0:
@@ -972,7 +972,7 @@ def identify_miscellaneous_details():
 
     # --------- SD? --------- #
     res = re.sub("[^0-9]", "", torrent_info["screen_size"])
-    if int(res) <= 720:
+    if int(res) < 720:
         torrent_info["sd"] = 1
 
 
