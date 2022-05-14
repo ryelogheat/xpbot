@@ -49,7 +49,12 @@ def search_for_dupes_api(search_site, imdb, torrent_info, tracker_api):
 
     existing_release_types = {}  # We first break down the results into very basic categories like "remux", "encode", "web" etc and store the title + results here
     existing_releases_count = {'bluray_encode': 0, 'bluray_remux': 0, 'webdl': 0, 'webrip': 0, 'hdtv': 0}  # We also log the num each type shows up on site
-
+    # to handle torrents with HDR and DV, we keep a separate dictionary to keep tracker of hdr. non-hdr and dv releases
+    # the reason to go for a separate map is because in `existing_release_types` the keys are torrent titles and that is not possible for hdr based filtering
+    # note that for hdr filtering we are not bothered about the different formats (PQ10, HDR, HLG etc), Since its rare to see a show release in multiple formats.
+    # although not impossible. (moonknight had PQ10 and HDR versions)
+    hdr_format_types = { 'hdr': [], 'dv_hdr': [], 'dv': [], 'normal': []}
+    
     for item in dupe_check_response.json()[str(config["dupes"]["parse_json"]["top_lvl"])]:
 
         if "torrent_details" in config["dupes"]["parse_json"]:
@@ -86,12 +91,30 @@ def search_for_dupes_api(search_site, imdb, torrent_info, tracker_api):
         # DVD
         if all(x in torrent_title_split for x in ['dvd']):
             existing_release_types[torrent_title] = "dvd"
+        
+        # HDR
+        if any(x in torrent_title_split for x in ['hdr', 'hdr10', 'hdr10+', 'hdr10plus', 'pq10', 'hlg', 'wcg']):
+            hdr_format_types['hdr'].append(torrent_title)
+        
+        # DV
+        if any(x in torrent_title_split for x in ['dv', 'dovi', 'dolbyvision']):
+            hdr_format_types['dv'].append(torrent_title)
+        
+        # Non-HDR
+        if all(x not in torrent_title_split for x in ['dv', 'dovi', 'dolbyvision', 'hdr', 'hdr10', 'hdr10+', 'hdr10plus', 'pq10', 'hlg', 'wcg']):
+            hdr_format_types['normal'].append(torrent_title)
+        
+        # DV HDR
+        if any(x in torrent_title_split for x in ['dv', 'dovi', 'dolbyvision']) and any(x in torrent_title_split for x in ['hdr', 'hdr10', 'hdr10+', 'hdr10plus', 'pq10', 'hlg', 'wcg']):
+            hdr_format_types['dv_hdr'].append(torrent_title)
 
-
+    logging.info(f'[DupeCheck] Existing release types based on hdr formats identified from tracker {search_site} are {hdr_format_types}')
 
     # This just updates a dict with the number of a particular "type" of release exists on site (e.g. "2 bluray_encodes" or "1 bluray_remux" etc)
     for onsite_quality_type in existing_release_types.values():
         existing_releases_count[onsite_quality_type] += 1
+    for hdr_format in hdr_format_types.keys():
+        existing_releases_count[hdr_format] = len(hdr_format_types[hdr_format])
     logging.info(msg=f'Results from initial dupe query (all resolution): {existing_releases_count}')
 
 
@@ -100,7 +123,24 @@ def search_for_dupes_api(search_site, imdb, torrent_info, tracker_api):
     if len(existing_release_types.keys()) == 0:
         logging.info(msg='Dupe query did not return any releases that we could parse, assuming no dupes exist.')
         return False
-
+    
+    our_format = "normal"
+    if "dv" in torrent_info:
+        our_format = "dv_hdr" if "hdr" in torrent_info else "dv"
+    elif "hdr" in torrent_info:
+        our_format = "hdr"
+    
+    logging.info(f'[DupeCheck] Eliminating releases based on HDR Format. We are tring to upload: "{our_format}". All other formats will be ignored.')
+    for item in hdr_format_types.keys():
+        if item != our_format:
+            for their_title in hdr_format_types[item]:
+                if their_title in existing_release_types:
+                    their_title_type = existing_release_types[their_title]
+                    existing_releases_count[their_title_type] -= 1
+                    existing_release_types.pop(their_title)
+            existing_releases_count[item] = 0
+            hdr_format_types[item] = []
+    logging.info(msg=f'[DupeCheck] After applying "HDR Format" filter: {existing_releases_count}')
 
     # --------------- Filter the existing_release_types dict to only include correct res & source_type --------------- #
     for their_title in list(existing_release_types.keys()):  # we wrap the dict keys in a "list()" so we can modify (pop) keys from it while the loop is running below
