@@ -134,7 +134,7 @@ def search_for_dupes_api(search_site, imdb, torrent_info, tracker_api):
     for item in hdr_format_types.keys():
         if item != our_format:
             for their_title in hdr_format_types[item]:
-                if their_title in existing_release_types:
+                if their_title in existing_release_types and their_title not in hdr_format_types[our_format]:
                     their_title_type = existing_release_types[their_title]
                     existing_releases_count[their_title_type] -= 1
                     existing_release_types.pop(their_title)
