@@ -269,7 +269,6 @@ def identify_type_and_basic_info(full_path):
             bdinfo_output_split = str(' '.join(str(subprocess.check_output([bdinfo_script, torrent_info["upload_media"], "-l"])).split())).split(' ')
             all_mpls_playlists = re.findall(r'\d\d\d\d\d\.MPLS', str(bdinfo_output_split))
             # In auto_mode we just choose the largest playlist
-            # TODO add support for auto_mode/user input
             dict_of_playlist_length_size = {}
             # Still identifying the largest playlist here...
             for index, mpls_playlist in enumerate(bdinfo_output_split):
@@ -974,6 +973,13 @@ def identify_miscellaneous_details():
     res = re.sub("[^0-9]", "", torrent_info["screen_size"])
     if int(res) < 720:
         torrent_info["sd"] = 1
+
+    # Use mediainfo to check if there is an atmos layer in the audio track
+    media_info = MediaInfo.parse(torrent_info["raw_video_file"] if "raw_video_file" in torrent_info else torrent_info["upload_media"])
+    for track in media_info.tracks:
+        if track.track_type == 'Audio':
+            if "JOC" in [track.other_format, track.format_additionalfeatures]:
+                torrent_info["atmos"] = "Atmos"
 
 
 def search_tmdb_for_id(query_title, year, content_type):
