@@ -25,7 +25,8 @@
     "mal": "mal",
     "igdb": "igdb",
     "optimized": "stream",
-    "nfo_file": "nfo_file"
+    "nfo_file": "nfo_file",
+    "pack": "pack"
   },
 
 
@@ -36,6 +37,7 @@
     "description": "string",
     "mediainfo": "file",
     "live": "string",
+    "pack": "string",
     "anon": "string",
 
     "category_id": {

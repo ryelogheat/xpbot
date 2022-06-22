@@ -1430,6 +1430,10 @@ def choose_right_tracker_keys():
                         # print(f"{translation_key} in namespace?: {translation_key in args}")
                         tracker_settings[config["translation"][translation_key]] = "1" if translation_key in args else "0"
 
+                    elif required_key == "pack":
+                        # This is a BHD specific setting, we set it to 1 if this is a TV show and a season pack
+                        tracker_settings[config["translation"][translation_key]] = "1" if torrent_info["type"] == "episode" and "e" not in torrent_info["s00e00"].lower() else "0"
+
                     # This work as a sort of 'catch all', if we don't have the correct data in torrent_info, we just send a 0 so we can successfully post
                     else:
                         tracker_settings[config["translation"][translation_key]] = "0"
