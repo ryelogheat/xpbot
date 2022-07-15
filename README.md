@@ -1,3 +1,8 @@
+# ReadMe!! 
+`While I still occasionally update this project, you should really consider using` [GG-BOT](https://gitlab.com/NoobMaster669/gg-bot-upload-assistant) `instead, its a fork of this project but is way more active & does pretty much everything better :)`  
+
+
+***
 # UNIT3D auto upload
 Automatically parse, rename, and upload torrents to trackers using the UNIT3D codebase
 ### Supported sites:
